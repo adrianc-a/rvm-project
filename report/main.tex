@@ -1,0 +1,73 @@
+\documentclass[letterpaper,11pt]{article}
+\usepackage{tabularx}
+\usepackage{amsmath}
+\usepackage{parskip}
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage[margin=1in,letterpaper]{geometry}
+\usepackage{cite}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amssymb,amsthm}
+\usepackage{multicol}
+
+\usepackage{caption}
+\usepackage{subcaption}
+
+
+
+\usepackage[english]{babel}
+\usepackage[final]{hyperref} % adds hyper links inside the generated pdf file
+\hypersetup{
+  colorlinks=true,       % false: boxed links; true: colored links
+  linkcolor=blue,        % color of internal links
+  citecolor=blue,        % color of links to bibliography
+  filecolor=magenta,     % color of file links
+  urlcolor=blue
+}
+
+
+\begin{document}
+
+\title{Project Report \\ DD2435 Machine Learning, Advanced Course}
+\author{
+    Adrian Chmielewski-Anders \\
+    \href{mailto:amca3@kth.se}{amca3@kth.se}
+    \and
+    Bas Straathof \\
+    \href{mailto:btstr@kth.se}{btstr@kth.se}
+    \and
+    Clara Tump \\
+    \href{mailto:tump@kth.se}{tump@kth.se}
+    \and
+    Leo Zeitler \\
+    \href{mailto:insertyouremaladdresshere@kth.se}{insertyouremaladdresshere@kth.se}
+}
+
+\date{\today}
+\maketitle
+
+
+\begin{abstract}
+\noindent This paper reports on various implementations of Sparse Modeling. This project relies heavily on the work presented in  \cite{tipping2000relevance} and \cite{tipping2001sparse}.
+\end{abstract}
+\vspace{-.3cm}
+
+\section{Introduction}
+\vspace{-.3cm}
+Hello, this is the introduction.\\
+
+\vspace{-.3cm}
+\section{Related work}
+\vspace{-.3cm}
+
+
+%Bibliography
+\newpage
+{\small
+\bibliography{bibliography}
+\bibliographystyle{ieeetr}
+}
+
+\end{document}
+

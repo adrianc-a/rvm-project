@@ -5,7 +5,7 @@ from scipy.spatial import distance
 import math
 
 
-def linearKernel(x, y):
+def linearKernel(x, y, *args):
     """For linear separation."""
     return np.dot(x.T, y)
 

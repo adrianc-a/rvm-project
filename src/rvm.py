@@ -62,7 +62,6 @@ class RVM:
         self.N = np.shape(X)[0]
         self.phi = self._initPhi(X)
         # Why assigning to the relevance vectors additionally 1?
-        # self.relevanceVectors = np.append(1, X)
         self.relevanceVectors = X
 
         self.beta = beta
@@ -131,7 +130,13 @@ class RVM:
         self.phi = self.phi[:, useful]
         self.covPosterior = self.covPosterior[np.ix_(useful, useful)]
         self.muPosterior = self.muPosterior[useful]
-        self.relevanceVectors = self.relevanceVectors[useful]
+        print(np.size(useful))
+        print(np.size(self.relevanceVectors))
+
+        if np.size(useful) != np.size(self.relevanceVectors):
+            self.relevanceVectors = self.relevanceVectors[useful[1:]]
+        else:
+            self.relevanceVectors = self.relevanceVectors[useful]
 
     def fit(self):
         """Fit the training data
@@ -154,6 +159,7 @@ class RVM:
 
             self.beta = (self.N - np.sum(gamma)) / \
                     np.linalg.norm(self.T - np.dot(self.phi, self.muPosterior))**2
+
 
             self._prune()
 
@@ -203,7 +209,7 @@ class RVC(RVM):
             self.muPosterior = weights_new.copy()
 
             # counter+=1
-        
+
 
     def _likelihood(self):
         """

@@ -190,7 +190,7 @@ class RVC(RVM):
         weight_old = self.muPosterior.copy()
         weights_new = np.full(self.muPosterior.shape, np.inf)
 
-        counter =0
+        # counter =0
         while np.absolute(weights_new - weight_old).all() >= EPS:
             weight_old = weights_new.copy()
             recent_likelihood, sigmoid = self._likelihood()
@@ -202,8 +202,8 @@ class RVC(RVM):
             self.covPosterior = np.linalg.inv(-second_derivative)
             self.muPosterior = weights_new.copy()
 
-            counter+=1
-            print counter
+            # counter+=1
+        
 
     def _likelihood(self):
         """

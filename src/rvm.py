@@ -130,8 +130,6 @@ class RVM:
         self.phi = self.phi[:, useful]
         self.covPosterior = self.covPosterior[np.ix_(useful, useful)]
         self.muPosterior = self.muPosterior[useful]
-        print(np.size(useful))
-        print(np.size(self.relevanceVectors))
 
         if np.size(useful) != np.size(self.relevanceVectors):
             self.relevanceVectors = self.relevanceVectors[useful[1:]]

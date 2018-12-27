@@ -27,9 +27,11 @@ class RVM:
             kernelName,
             p=3,
             sigma=5,
-            alpha=10**-3,
-            beta=10**-3,
-            convergenceThresh=10**-5,
+            # Big alpha since we want to cover a lot of weight values
+            # See evidence part of last assignment
+            alpha=10**6,
+            beta=3,
+            convergenceThresh=10**-9,
             alphaThresh=10**9,
             learningRate=0.2
             ):
@@ -132,14 +134,17 @@ class RVM:
         self.alpha = self.alpha[useful]
 
         # Shouldn't it be for both dimensions?
-        self.phi = self.phi[:, useful]
         self.covPosterior = self.covPosterior[np.ix_(useful, useful)]
         self.muPosterior = self.muPosterior[useful]
 
         if np.size(useful) != np.size(self.relevanceVectors):
             self.relevanceVectors = self.relevanceVectors[useful[1:]]
+            self.phi = self.phi[:, useful]
+            self.phi = self.phi[useful[1:], :]
         else:
             self.relevanceVectors = self.relevanceVectors[useful]
+            self.phi = self.phi[:, useful]
+            self.phi = self.phi[useful, :]
 
     def _reestimatingAlphaBeta(self):
         """
@@ -253,19 +258,19 @@ class RVC(RVM):
         for i in range(len(all_outputs)):
             posterior += self.T[i] * np.log(all_outputs[i])
             posterior += (1-self.T[i]) * np.log(1 - all_outputs[i])
-        posterior -= 0.5 * self.muPosterior.T @ np.diag(self.alpha) @ weights_new
+        posterior -= 0.5 * self.muPosterior.T.dot(np.dot(np.diag(self.alpha), weights_new))
 
         self.muPosterior = weights_save
-        return posterior
+        return -posterior
 
     def _posteriorGradient(self, weights_new):
         weights_save = self.muPosterior
         self.muPosterior = weights_new
         all_outputs, _ = self._likelihood()
-        ret = self.phi.T @ (self.T - all_outputs) - np.diag(self.alpha) @ weights_new
+        ret = self.phi.T.dot(self.T - all_outputs) - np.diag(self.alpha).dot(weights_new)
         self.muPosterior = weights_save
 
-        return ret
+        return -ret
 
 
     def fit(self):
@@ -274,22 +279,35 @@ class RVC(RVM):
         while np.absolute(np.sum(self.alpha - alphaOld)) >= self.convergenceThresh:
             alphaOld = np.array(self.alpha)
 
-
-            #self.irls()
-            optRes = minimize(self._posterior, np.random.randn(self.muPosterior.shape[0]), jac=self._posteriorGradient)
-            self.muPosterior = optRes.x
-            recent_likelihood, sigmoid = self._likelihood()
-            recent_likelihood_matrix = np.diag(recent_likelihood)
-            second_derivative = -(np.dot(
-                self.phi.transpose().dot(recent_likelihood_matrix),
-                self.phi) + np.diag(self.alpha))
-
-            self.covPosterior = np.linalg.inv(-second_derivative)
+            self.irls()
+            # optRes = minimize(self._posterior, np.random.randn(self.muPosterior.shape[0]), jac=self._posteriorGradient)
+            # self.muPosterior = optRes.x
+            # recent_likelihood, sigmoid = self._likelihood()
+            # recent_likelihood_matrix = np.diag(recent_likelihood)
+            # second_derivative = -(np.dot(
+            #     self.phi.transpose().dot(recent_likelihood_matrix),
+            #     self.phi) + np.diag(self.alpha))
+            #
+            # self.covPosterior = np.linalg.inv(-second_derivative)
 
             self._reestimatingAlphaBeta()
-            # self._prune()
+            self._prune()
+            print(np.absolute(np.sum(self.alpha - alphaOld)))
 
-    def predict(self, X):
-        """Make class predictions"""
-        pass
+    def predict(self, unseen_x):
+        """
+        Make predictions for unseen data
+        :param unseen_x: unseen data (np.array)
+        :return: prediction values and
+        """
+        sigmoid = []
+        for x in unseen_x:
+            # Try catch only for debugging purpose
+            try:
+                result = 1 / (1 + math.exp(-self.rvm_output(x)))
+            except:
+                result = -1
 
+            sigmoid.append(result)
+        sigmoid = np.asarray(sigmoid)
+        return sigmoid[sigmoid > -1], unseen_x[sigmoid > -1]

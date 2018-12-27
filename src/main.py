@@ -35,9 +35,9 @@ def main():
     print(clf.relevanceVectors)
 
     # This is using training data -- should be changed of course
-    TPred = np.dot(clf.muPosterior, np.transpose(clf.phi))
+    TPred, Unseen = clf.predict(X)
     plt.scatter(X, T, label='Original Data')
-    plt.scatter(X, TPred, color='r', label='Predictions')
+    plt.scatter(Unseen, TPred, color='r', label='Predictions')
     plt.xlabel("x")
     plt.ylabel("t")
     plt.legend()

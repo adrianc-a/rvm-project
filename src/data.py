@@ -5,7 +5,7 @@ import numpy as np
 
 def createSimpleClassData(n, scale=10):
     X = np.random.random(n) * scale - scale/2.
-    T = np.random.random(n) * 2 - 1 > 0
+    T = X > 0 #np.random.random(n) * 2 - 1 > 0
     return X, T.astype(int)
 
 

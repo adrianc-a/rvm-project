@@ -7,6 +7,8 @@ __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
 
 
 from kernels import linearKernel, polynomialKernel, RBFKernel
+from scipy.optimize import minimize
+from scipy.special import expit
 
 import math
 import numpy as np
@@ -251,6 +253,7 @@ class RVC(RVM):
             self._reestimatingAlphaBeta()
             # self._prune()
             _, sigmoid = self._likelihood()
+            print np.absolute(np.sum(self.T - sigmoid))
 
     def predict(self, X):
         """Make class predictions"""

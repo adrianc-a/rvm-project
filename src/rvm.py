@@ -13,9 +13,6 @@ from scipy.special import expit
 import math
 import numpy as np
 
-# Set a random seed
-np.random.seed(0)
-
 
 class RVM:
     """Relevance Vector Machine class implementation based on Mike Tipping's
@@ -32,8 +29,9 @@ class RVM:
             sigma=5,
             alpha=10**-3,
             beta=10**-3,
-            convergenceThresh=10**-6,
+            convergenceThresh=10**-5,
             alphaThresh=10**9,
+            learningRate=0.2
             ):
         """
         RVM parameters initialization
@@ -48,6 +46,7 @@ class RVM:
         alphaThresh (float): threshold for pruning alpha values
         maxIter (int): maximum number of iterations for the posterior mode finder
                        in RVM classification
+        learningRate (float): The learning rate for the Newton/IRLS update step
 
         """
 
@@ -64,6 +63,7 @@ class RVM:
         self.beta = beta
         self.convergenceThresh = convergenceThresh
         self.alphaThresh = alphaThresh
+        self.learningRate = learningRate
 
         self.alpha = alpha * np.ones(self.N + 1)
 
@@ -157,7 +157,7 @@ class RVM:
         """
         pass
 
-    def predict(self):
+    def predict(self, unseen_x):
         """
         Dummy for the predicting method
         """
@@ -209,19 +209,23 @@ class RVC(RVM):
 
     def irls(self):
         a = np.diag(self.alpha)
-        weight_old = self.muPosterior
-        weights_new = np.full(self.muPosterior.shape, np.inf)
+        weights_old = np.full(self.muPosterior.shape, np.inf)
 
-        while np.all(np.absolute(weights_new - weight_old) >= self.convergenceThresh):
-            weight_old = weights_new
+        self.muPosterior = np.random.randn(self.muPosterior.shape[0])
+        second_derivative = None
+        iters = 0
+        while iters < 100 and np.all(np.absolute(self.muPosterior - weights_old) >= self.convergenceThresh):
             recent_likelihood, sigmoid = self._likelihood()
             recent_likelihood_matrix = np.diag(recent_likelihood)
             second_derivative = -(np.dot(self.phi.transpose().dot(recent_likelihood_matrix), self.phi) + a)
             first_derivative = self.phi.transpose().dot(self.T - sigmoid) - a.dot(self.muPosterior)
 
-            weights_new = self.muPosterior - np.linalg.inv(second_derivative).dot(first_derivative)
-            self.covPosterior = np.linalg.inv(-second_derivative)
-            self.muPosterior = weights_new
+            weights_old = self.muPosterior
+
+            self.muPosterior -= self.learningRate * np.linalg.solve(second_derivative, first_derivative)
+            iters += 1
+        print('Iterations used: ', iters)
+        self.covPosterior = np.linalg.inv(-second_derivative)
 
 
     def _likelihood(self):
@@ -236,11 +240,34 @@ class RVC(RVM):
                          design matrix
 
         """
-
         sigmoid = np.asarray([ 1 / (1 + math.exp(-self.rvm_output(x))) for x in self.X])
         beta = np.multiply(sigmoid, np.ones(sigmoid.shape) - sigmoid)
 
         return beta, sigmoid
+
+    def _posterior(self, weights_new):
+        weights_save = self.muPosterior
+        self.muPosterior = weights_new
+        all_outputs, _ = self._likelihood()
+
+        posterior = 0.0
+        for i in range(len(all_outputs)):
+            posterior += self.T[i] * np.log(all_outputs[i])
+            posterior += (1-self.T[i]) * np.log(1 - all_outputs[i])
+        posterior -= 0.5 * self.muPosterior.T @ np.diag(self.alpha) @ weights_new
+
+        self.muPosterior = weights_save
+        return posterior
+
+    def _posteriorGradient(self, weights_new):
+        weights_save = self.muPosterior
+        self.muPosterior = weights_new
+        all_outputs, _ = self._likelihood()
+        ret = self.phi.T @ (self.T - all_outputs) - np.diag(self.alpha) @ weights_new
+        self.muPosterior = weights_save
+
+        return ret
+
 
     def fit(self):
         alphaOld = 0 * np.ones(self.N + 1)
@@ -248,7 +275,18 @@ class RVC(RVM):
         while abs(sum(self.alpha) - sum(alphaOld)) >= self.convergenceThresh:
             alphaOld = np.array(self.alpha)
 
-            self.irls()
+
+            #self.irls()
+            optRes = minimize(self._posterior, np.random.randn(self.muPosterior.shape[0]), jac=self._posteriorGradient)
+            self.muPosterior = optRes.x
+            recent_likelihood, sigmoid = self._likelihood()
+            recent_likelihood_matrix = np.diag(recent_likelihood)
+            second_derivative = -(np.dot(
+                self.phi.transpose().dot(recent_likelihood_matrix),
+                self.phi) + np.diag(self.alpha))
+
+            self.covPosterior = np.linalg.inv(-second_derivative)
+
             self._reestimatingAlphaBeta()
             # self._prune()
 

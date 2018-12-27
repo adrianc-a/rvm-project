@@ -25,10 +25,10 @@ def initData(N, dataset):
 def main():
     N = 200
     X, T = initData(N, createSimpleClassData)
-    # X, T = initData(N, sincNoiseFree)
+    #X, T = initData(N, sincNoiseFree)
 
     clf = RVC(X, T, 'RBFKernel')
-    # clf = RVR(X, T, 'RBFKernel')
+    #clf = RVR(X, T, 'RBFKernel')
     clf.fit()
 
     print("The relevance vectors:")
@@ -36,10 +36,11 @@ def main():
 
     # This is using training data -- should be changed of course
     TPred = np.dot(clf.muPosterior, np.transpose(clf.phi))
-    plt.scatter(X, T)
-    plt.scatter(X, TPred, color='r')
+    plt.scatter(X, T, label='Original Data')
+    plt.scatter(X, TPred, color='r', label='Predictions')
     plt.xlabel("x")
     plt.ylabel("t")
+    plt.legend()
     plt.show()
 
 

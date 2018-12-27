@@ -1,0 +1,4 @@
+*.xml
+.idea/
+*.pyc
+src/__pycache__

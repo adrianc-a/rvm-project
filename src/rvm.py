@@ -146,10 +146,10 @@ class RVM:
         Re estimates alpha and beta values according to the paper
         """
         gamma = 1 - self.alpha * np.diag(self.covPosterior)
-        self.alpha = gamma / self.muPosterior ** 2
+        self.alpha = gamma / (self.muPosterior ** 2)
 
         self.beta = (self.N - np.sum(gamma)) / \
-                    np.linalg.norm(self.T - np.dot(self.phi, self.muPosterior)) ** 2
+                    (np.linalg.norm(self.T - np.dot(self.phi, self.muPosterior)) ** 2)
 
     def fit(self):
         """
@@ -227,7 +227,6 @@ class RVC(RVM):
         print('Iterations used: ', iters)
         self.covPosterior = np.linalg.inv(-second_derivative)
 
-
     def _likelihood(self):
         """
         Classify a data point
@@ -272,7 +271,7 @@ class RVC(RVM):
     def fit(self):
         alphaOld = 0 * np.ones(self.N + 1)
 
-        while abs(sum(self.alpha) - sum(alphaOld)) >= self.convergenceThresh:
+        while np.absolute(np.sum(self.alpha - alphaOld)) >= self.convergenceThresh:
             alphaOld = np.array(self.alpha)
 
 

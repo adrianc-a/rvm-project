@@ -245,15 +245,12 @@ class RVC(RVM):
     def fit(self):
         alphaOld = 0 * np.ones(self.N + 1)
 
-        _, sigmoid = self._likelihood()
         while abs(sum(self.alpha) - sum(alphaOld)) >= self.convergenceThresh:
             alphaOld = np.array(self.alpha)
 
             self.irls()
             self._reestimatingAlphaBeta()
             # self._prune()
-            _, sigmoid = self._likelihood()
-            print np.absolute(np.sum(self.T - sigmoid))
 
     def predict(self, X):
         """Make class predictions"""

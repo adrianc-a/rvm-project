@@ -146,10 +146,10 @@ class RVM:
         Re estimates alpha and beta values according to the paper
         """
         gamma = 1 - self.alpha * np.diag(self.covPosterior)
-        self.alpha = gamma / self.muPosterior ** 2
+        self.alpha = gamma / (self.muPosterior ** 2)
 
         self.beta = (self.N - np.sum(gamma)) / \
-                    np.linalg.norm(self.T - np.dot(self.phi, self.muPosterior)) ** 2
+                    (np.linalg.norm(self.T - np.dot(self.phi, self.muPosterior)) ** 2)
 
     def fit(self):
         """
@@ -212,7 +212,7 @@ class RVC(RVM):
         weight_old = self.muPosterior
         weights_new = np.full(self.muPosterior.shape, np.inf)
 
-        while np.all(np.absolute(weights_new - weight_old) >= self.convergenceThresh):
+        while np.absolute(np.sum(weights_new - weight_old)) >= self.convergenceThresh:
             weight_old = weights_new
             recent_likelihood, sigmoid = self._likelihood()
             recent_likelihood_matrix = np.diag(recent_likelihood)
@@ -222,7 +222,6 @@ class RVC(RVM):
             weights_new = self.muPosterior - np.linalg.inv(second_derivative).dot(first_derivative)
             self.covPosterior = np.linalg.inv(-second_derivative)
             self.muPosterior = weights_new
-
 
     def _likelihood(self):
         """
@@ -245,7 +244,7 @@ class RVC(RVM):
     def fit(self):
         alphaOld = 0 * np.ones(self.N + 1)
 
-        while abs(sum(self.alpha) - sum(alphaOld)) >= self.convergenceThresh:
+        while np.absolute(np.sum(self.alpha - alphaOld)) >= self.convergenceThresh:
             alphaOld = np.array(self.alpha)
 
             self.irls()

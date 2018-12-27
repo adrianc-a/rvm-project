@@ -25,8 +25,10 @@ def initData(N, dataset):
 def main():
     N = 200
     X, T = initData(N, createSimpleClassData)
+    # X, T = initData(N, sincNoiseFree)
 
     clf = RVC(X, T, 'RBFKernel')
+    # clf = RVR(X, T, 'RBFKernel')
     clf.fit()
 
     print("The relevance vectors:")

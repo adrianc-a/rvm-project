@@ -206,7 +206,6 @@ class RVR(RVM):
         return self.rvm_output(unseen_x)
 
 
-
 class RVC(RVM):
     """
     Relevance Vector Machine classification

@@ -98,6 +98,9 @@ class RVM:
         return np.asarray(kernel_output).dot(self.muPosterior)
 
     def _setCovAndMu(self):
+        """
+        Set the covariance and the mean according to the recent alpha and beta values
+        """
         self.covPosterior = np.linalg.inv(
             np.diag(self.alpha) + self.beta * np.dot(self.phi.T, self.phi))
         self.muPosterior = self.beta * \
@@ -213,101 +216,19 @@ class RVC(RVM):
     """
 
     def irls(self):
-        a = np.diag(self.alpha)
-        weights_old = np.full(self.muPosterior.shape, np.inf)
-
-        self.muPosterior = np.random.randn(self.muPosterior.shape[0])
-        second_derivative = None
-        iters = 0
-        while iters < 100 and np.all(np.absolute(self.muPosterior - weights_old) >= self.convergenceThresh):
-            recent_likelihood, sigmoid = self._likelihood()
-            recent_likelihood_matrix = np.diag(recent_likelihood)
-            second_derivative = -(np.dot(self.phi.transpose().dot(recent_likelihood_matrix), self.phi) + a)
-            first_derivative = self.phi.transpose().dot(self.T - sigmoid) - a.dot(self.muPosterior)
-
-            weights_old = self.muPosterior
-
-            self.muPosterior -= self.learningRate * np.linalg.solve(second_derivative, first_derivative)
-            iters += 1
-        print('Iterations used: ', iters)
-        self.covPosterior = np.linalg.inv(-second_derivative)
+        pass
 
     def _likelihood(self):
-        """
-        Classify a data point
-
-        Args:
-        X (numpy.ndarray): datapoints
-
-        Returns:
-        sigmoid (numpy.ndarray): the sigmoid of the dot product of the weights with the
-                         design matrix
-
-        """
-        sigmoid = np.asarray([ 1 / (1 + math.exp(-self.rvm_output(x))) for x in self.X])
-        beta = np.multiply(sigmoid, np.ones(sigmoid.shape) - sigmoid)
-
-        return beta, sigmoid
+        pass
 
     def _posterior(self, weights_new):
-        weights_save = self.muPosterior
-        self.muPosterior = weights_new
-        all_outputs, _ = self._likelihood()
-
-        posterior = 0.0
-        for i in range(len(all_outputs)):
-            posterior += self.T[i] * np.log(all_outputs[i])
-            posterior += (1-self.T[i]) * np.log(1 - all_outputs[i])
-        posterior -= 0.5 * self.muPosterior.T.dot(np.dot(np.diag(self.alpha), weights_new))
-
-        self.muPosterior = weights_save
-        return -posterior
+        pass
 
     def _posteriorGradient(self, weights_new):
-        weights_save = self.muPosterior
-        self.muPosterior = weights_new
-        all_outputs, _ = self._likelihood()
-        ret = self.phi.T.dot(self.T - all_outputs) - np.diag(self.alpha).dot(weights_new)
-        self.muPosterior = weights_save
-
-        return -ret
-
+        pass
 
     def fit(self):
-        alphaOld = 0 * np.ones(self.N + 1)
-
-        while np.absolute(np.sum(self.alpha - alphaOld)) >= self.convergenceThresh:
-            alphaOld = np.array(self.alpha)
-
-            self.irls()
-            # optRes = minimize(self._posterior, np.random.randn(self.muPosterior.shape[0]), jac=self._posteriorGradient)
-            # self.muPosterior = optRes.x
-            # recent_likelihood, sigmoid = self._likelihood()
-            # recent_likelihood_matrix = np.diag(recent_likelihood)
-            # second_derivative = -(np.dot(
-            #     self.phi.transpose().dot(recent_likelihood_matrix),
-            #     self.phi) + np.diag(self.alpha))
-            #
-            # self.covPosterior = np.linalg.inv(-second_derivative)
-
-            self._reestimatingAlphaBeta()
-            self._prune()
-            print(np.absolute(np.sum(self.alpha - alphaOld)))
+        pass
 
     def predict(self, unseen_x):
-        """
-        Make predictions for unseen data
-        :param unseen_x: unseen data (np.array)
-        :return: prediction values and
-        """
-        sigmoid = []
-        for x in unseen_x:
-            # Try catch only for debugging purpose
-            try:
-                result = 1 / (1 + math.exp(-self.rvm_output(x)))
-            except:
-                result = -1
-
-            sigmoid.append(result)
-        sigmoid = np.asarray(sigmoid)
-        return sigmoid[sigmoid > -1], unseen_x[sigmoid > -1]
+        pass

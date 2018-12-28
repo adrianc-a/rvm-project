@@ -24,20 +24,18 @@ def initData(N, dataset):
 
 def main():
     N = 200
-    X, T = initData(N, createSimpleClassData)
-    #X, T = initData(N, sincNoiseFree)
+    X, T = initData(N, sincNoiseFree)
 
-    clf = RVC(X, T, 'RBFKernel')
-    #clf = RVR(X, T, 'RBFKernel')
+    clf = RVR(X, T, 'RBFKernel')
     clf.fit()
 
     print("The relevance vectors:")
     print(clf.relevanceVectors)
 
     # This is using training data -- should be changed of course
-    TPred, Unseen = clf.predict(X)
+    TPred = clf.predict(X)
     plt.scatter(X, T, label='Original Data')
-    plt.scatter(Unseen, TPred, color='r', label='Predictions')
+    plt.scatter(X, TPred, color='r', label='Predictions')
     plt.xlabel("x")
     plt.ylabel("t")
     plt.legend()

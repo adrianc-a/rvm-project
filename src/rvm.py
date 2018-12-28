@@ -29,7 +29,7 @@ class RVM:
             sigma=5,
             # Big alpha since we want to cover a lot of weight values
             # See evidence part of last assignment
-            alpha=10**6,
+            alpha=1000,
             beta=3,
             convergenceThresh=10**-9,
             alphaThresh=10**9,
@@ -93,7 +93,9 @@ class RVM:
         """
         kernel, args = self._get_kernel_function()
         kernel_output = [kernel(unseen_x, x_i, args) for x_i in self.relevanceVectors]
-        kernel_output = np.insert(kernel_output, 0, 1)
+        # if bias was not pruned
+        if self.muPosterior.shape[0] == np.asarray(kernel_output)[0] + 1:
+            kernel_output = np.insert(kernel_output, 0, 1)
 
         return np.asarray(kernel_output).dot(self.muPosterior)
 
@@ -103,8 +105,10 @@ class RVM:
         """
         self.covPosterior = np.linalg.inv(
             np.diag(self.alpha) + self.beta * np.dot(self.phi.T, self.phi))
-        self.muPosterior = self.beta * \
-                           np.dot(np.dot(self.covPosterior, self.phi.T), self.T)
+        subresult = np.dot(self.covPosterior, self.phi.T)
+        subresult = subresult.dot(self.T)
+        self.muPosterior = self.beta * subresult
+
 
     def _initPhi(self, X):
         """
@@ -134,20 +138,27 @@ class RVM:
         Prunes alpha such that only relevant weights are kept
         """
         useful = self.alpha < self.alphaThresh
-        self.alpha = self.alpha[useful]
+        if useful.all():
+            return
 
-        # Shouldn't it be for both dimensions?
-        self.covPosterior = self.covPosterior[np.ix_(useful, useful)]
-        self.muPosterior = self.muPosterior[useful]
-
-        if np.size(useful) != np.size(self.relevanceVectors):
+        if self.alpha.shape[0] == self.relevanceVectors.shape[0] + 1:
             self.relevanceVectors = self.relevanceVectors[useful[1:]]
+            self.T = self.T[useful[1:]]
             self.phi = self.phi[:, useful]
             self.phi = self.phi[useful[1:], :]
-        else:
+
+        elif self.alpha.shape[0] == self.relevanceVectors.shape[0]:
             self.relevanceVectors = self.relevanceVectors[useful]
+            self.T = self.T[useful]
             self.phi = self.phi[:, useful]
             self.phi = self.phi[useful, :]
+
+        else:
+            raise RuntimeError
+
+        self.alpha = self.alpha[useful]
+        self.covPosterior = self.covPosterior[np.ix_(useful, useful)]
+        self.muPosterior = self.muPosterior[useful]
 
     def _reestimatingAlphaBeta(self):
         """
@@ -206,7 +217,7 @@ class RVR(RVM):
         T (numpy.ndarray): predicted target values
 
         """
-        return self.rvm_output(unseen_x)
+        return np.asarray([self.rvm_output(x) for x in unseen_x])
 
 
 

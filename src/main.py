@@ -23,7 +23,7 @@ def initData(N, dataset):
 
 
 def main():
-    N = 200
+    N = 210
     X, T = initData(N, sincNoiseFree)
 
     clf = RVR(X, T, 'RBFKernel')

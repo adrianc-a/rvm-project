@@ -134,14 +134,17 @@ class RVM:
 
         return PHI
 
-    def _prune(self):
+    def _prune(self, itCount):
         """
         Prunes alpha such that only relevant weights are kept
         """
         useful = self.alpha < self.alphaThresh
         if useful.all():
             return
-        # print("alpha: ")
+        if (self.alpha < np.zeros(len(self.alpha))).any():
+            print("oh no alpha contains something negative")
+            print("iteration: ", itCount)
+            print(self.alpha)
         # print(self.alpha)
         if self.alpha.shape[0] == self.relevanceVectors.shape[0] + 1:
             self.relevanceVectors = self.relevanceVectors[useful[1:]]
@@ -191,6 +194,7 @@ class RVR(RVM):
     """
     Relevance Vector Machine regression
     """
+
     def _posterior(self):
         """
         Compute the posterior distribution over the weights
@@ -201,14 +205,15 @@ class RVR(RVM):
         """
         Fit the training data
         """
+        itCount = 0
         alphaOld = np.zeros(self.N+1)
-
         while abs(sum(self.alpha) - sum(alphaOld)) >= self.convergenceThresh:
             alphaOld = np.array(self.alpha)
 
             self._reestimatingAlphaBeta()
-            self._prune()
+            self._prune(itCount)
             self._posterior()
+            itCount = itCount + 1
 
     def predict(self, unseen_x):
         """

@@ -16,7 +16,7 @@ np.random.seed(0)
 
 
 def initData(N, dataset):
-    """Initialize the data set traning and testing examples"""
+    """Initialize the data set training and testing examples"""
     X, T = dataset(N)
 
     return X, T

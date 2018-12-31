@@ -42,8 +42,8 @@ class RVM:
         kernelName (string): the kernel function
         p (int): polynomial kernel function parameter
         sigma (int): RBF kernel function parameter
-        alpha (float): inital alpha value
-        beta (float): inital beta value
+        alpha (float): initial alpha value
+        beta (float): initial beta value
         convergenceThresh (float): threshold for convergence in fit() function
         alphaThresh (float): threshold for pruning alpha values
         maxIter (int): maximum number of iterations for the posterior mode finder
@@ -197,7 +197,7 @@ class RVR(RVM):
         """
         Fit the training data
         """
-        alphaOld = 0 * np.ones(self.N+1)
+        alphaOld = np.zeros(self.N+1)
 
         while abs(sum(self.alpha) - sum(alphaOld)) >= self.convergenceThresh:
             alphaOld = np.array(self.alpha)

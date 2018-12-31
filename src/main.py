@@ -31,11 +31,16 @@ def main():
 
     print("The relevance vectors:")
     print(clf.relevanceVectors)
+    print("The relevance vectors T")
+    print(clf.relevanceVectorsT)
 
     # This is using training data -- should be changed of course
     TPred = clf.predict(X)
-    plt.scatter(X, T, label='Original Data')
-    plt.scatter(X, TPred, color='r', label='Predictions')
+    plt.scatter(X, T, label='Original Data', s=20)
+    plt.scatter(X, TPred, color='r', label='Predictions', s=20)
+    plt.scatter(clf.relevanceVectors, clf.relevanceVectorsT, facecolors='none', edgecolors='k', label='Relevance Vecs', s=48)
+
+
     plt.xlabel("x")
     plt.ylabel("t")
     plt.legend()

@@ -61,6 +61,7 @@ class RVM:
         self.N = np.shape(X)[0]
         self.phi = self._initPhi(X)
         self.relevanceVectors = X
+        self.relevanceVectorsT = T
 
         self.beta = beta
         self.convergenceThresh = convergenceThresh
@@ -140,15 +141,18 @@ class RVM:
         useful = self.alpha < self.alphaThresh
         if useful.all():
             return
-
+        # print("alpha: ")
+        # print(self.alpha)
         if self.alpha.shape[0] == self.relevanceVectors.shape[0] + 1:
             self.relevanceVectors = self.relevanceVectors[useful[1:]]
+            self.relevanceVectorsT = self.relevanceVectorsT[useful[1:]]
             self.T = self.T[useful[1:]]
             self.phi = self.phi[:, useful]
             self.phi = self.phi[useful[1:], :]
 
         elif self.alpha.shape[0] == self.relevanceVectors.shape[0]:
             self.relevanceVectors = self.relevanceVectors[useful]
+            self.relevanceVectorsT = self.relevanceVectorsT[useful]
             self.T = self.T[useful]
             self.phi = self.phi[:, useful]
             self.phi = self.phi[useful, :]

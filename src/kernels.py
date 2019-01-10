@@ -20,7 +20,7 @@ def linearKernel(x, y, *args):
     *args (none)
 
     """
-    return x.T * y
+    return np.dot(x, y)
 
 
 def linearSplineKernel(x, y, *args):

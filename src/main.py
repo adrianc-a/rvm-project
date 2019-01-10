@@ -60,7 +60,7 @@ def main():
     plt.xlabel("x")
     plt.ylabel("t")
     plt.legend()
-    plt.savefig("../plots/sincdataplot.png", bbox_inches="tight")
+    # plt.savefig("../plots/sincdataplot.png", bbox_inches="tight")
     plt.show()
 
 

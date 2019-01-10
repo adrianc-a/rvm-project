@@ -20,7 +20,7 @@ def linearKernel(x, y, *args):
     *args (none)
 
     """
-    return x.T * y
+    return np.dot(x, y)
 
 
 def linearSplineKernel(x, y, *args):
@@ -48,7 +48,7 @@ def polynomialKernel(x, y, *args):
     *args (int): the degree of the polynomial
 
     """
-    return math.pow(x.T * y + 1, args[0])
+    return math.pow(np.dot(x,y) + 1, args[0])
 
 
 def RBFKernel(x, y, *args):
@@ -65,3 +65,6 @@ def RBFKernel(x, y, *args):
 
     return math.exp(- num / denom)
 
+
+def cosineKernel(x, y, *args):
+    return (np.pi / 4.0) * np.cos(np.pi * 0.5 * np.linalg.norm(x - y))

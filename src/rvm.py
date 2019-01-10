@@ -5,7 +5,8 @@
 __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
               and Leo Zeitler"
 
-from kernels import linearKernel, linearSplineKernel, polynomialKernel, RBFKernel
+from kernels import linearKernel, linearSplineKernel, polynomialKernel, RBFKernel, cosineKernel
+
 from scipy.optimize import minimize
 from scipy.special import expit
 
@@ -56,7 +57,7 @@ class RVM:
         self.T = T
         self.N = np.shape(X)[0]
         self.phi = self._initPhi(X)
-        self.relevanceVectors = X
+        self.relevanceVectors = np.copy(X)
 
         self.beta = beta
         self.convergenceThresh = convergenceThresh
@@ -85,6 +86,9 @@ class RVM:
         elif self.kernelName == 'polynomialKernel':
             return polynomialKernel, self.p
 
+        elif self.kernelName == 'cosineKernel':
+            return cosineKernel, None
+
     def rvm_output(self, unseen_x):
         """
         Calculate the output of the rvm for an unseen data point
@@ -93,11 +97,13 @@ class RVM:
         """
         kernel, args = self._get_kernel_function()
         kernel_output = [kernel(unseen_x, x_i, args) for x_i in self.relevanceVectors]
-        # if bias was not pruned
-        if self.muPosterior.shape[0] == np.asarray(kernel_output)[0] + 1:
+        kernel_output = np.asarray(kernel_output)
+        if kernel_output.shape[0] + 1 == self.muPosterior.shape[0]:
             kernel_output = np.insert(kernel_output, 0, 1)
+        elif kernel_output.shape[0] != self.muPosterior.shape[0]:
+            raise RuntimeError
 
-        return np.asarray(kernel_output).dot(self.muPosterior)
+        return kernel_output.dot(self.muPosterior)
 
     def _setCovAndMu(self):
         """
@@ -131,7 +137,7 @@ class RVM:
 
         return PHI
 
-    def _prune(self):
+    def _prune(self, alphaOld):
         """
         Prunes alpha such that only relevant weights are kept
         """
@@ -157,6 +163,8 @@ class RVM:
         self.alpha = self.alpha[useful]
         self.covPosterior = self.covPosterior[np.ix_(useful, useful)]
         self.muPosterior = self.muPosterior[useful]
+
+        return alphaOld[useful]
 
     def _reestimateAlphaBeta(self):
         """
@@ -201,7 +209,7 @@ class RVR(RVM):
             alphaOld = np.array(self.alpha)
 
             self._reestimateAlphaBeta()
-            self._prune()
+            self._prune(alphaOld)
             self._posterior()
 
             if abs(sum(self.alpha) - sum(alphaOld)) <= self.convergenceThresh:
@@ -228,10 +236,41 @@ class RVC(RVM):
     """
 
     def irls(self):
-        pass
+        a = np.diag(self.alpha)
+        weights_old = np.full(self.muPosterior.shape, np.inf)
+
+        second_derivative = None
+        iters = 0
+        while iters < 30 and np.linalg.norm(self.muPosterior - weights_old) >= self.convergenceThresh:
+            recent_likelihood, sigmoid = self._likelihood()
+            recent_likelihood_matrix = np.diag(recent_likelihood)
+            second_derivative = -(np.dot(self.phi.transpose().dot(recent_likelihood_matrix), self.phi) + a)
+            first_derivative = self.phi.transpose().dot(self.T - sigmoid) - a.dot(self.muPosterior)
+
+            weights_old = np.copy(self.muPosterior)
+            self.muPosterior -= self.learningRate * np.linalg.solve(second_derivative, first_derivative)
+            print(np.linalg.norm(self.muPosterior - weights_old))
+
+            iters += 1
+        print('Iterations used: ', iters)
+        self.covPosterior = np.linalg.inv(-second_derivative)
 
     def _likelihood(self):
-        pass
+        """
+        Classify a data point
+
+        Args:
+        X (numpy.ndarray): datapoints
+
+        Returns:
+        sigmoid (numpy.ndarray): the sigmoid of the dot product of the weights with the
+                         design matrix
+
+        """
+        sigmoid = np.asarray([ 1 / (1 + np.exp(-self.rvm_output(x))) for x in self.relevanceVectors])
+        beta = np.multiply(sigmoid, np.ones(sigmoid.shape) - sigmoid)
+
+        return beta, sigmoid
 
     def _posterior(self, weights_new):
         pass
@@ -240,7 +279,35 @@ class RVC(RVM):
         pass
 
     def fit(self):
-        pass
+        alphaOld = 0 * np.ones(self.N + 1)
+
+        iters = 0
+        while np.linalg.norm(self.alpha - alphaOld) >= self.convergenceThresh\
+                and iters < 10:
+            alphaOld = np.array(self.alpha)
+
+            self.irls()
+            # optRes = minimize(self._posterior, np.random.randn(self.muPosterior.shape[0]), jac=self._posteriorGradient)
+            # self.muPosterior = optRes.x
+            # recent_likelihood, sigmoid = self._likelihood()
+            # recent_likelihood_matrix = np.diag(recent_likelihood)
+            # second_derivative = -(np.dot(
+            #     self.phi.transpose().dot(recent_likelihood_matrix),
+            #     self.phi) + np.diag(self.alpha))
+            #
+            # self.covPosterior = np.linalg.inv(-second_derivative)
+
+            self._reestimatingAlphaBeta()
+            alphaOld = self._prune(alphaOld)
+            #print(np.linalg.norm(self.alpha - alphaOld))
+            iters += 1
 
     def predict(self, unseen_x):
-        pass
+        """
+        Make predictions for unseen data
+        :param unseen_x: unseen data (np.array)
+        :return: prediction values and
+        """
+        return np.asarray(
+            [1.0/(1.0+math.exp(-self.rvm_output(x))) for x in unseen_x]
+        )

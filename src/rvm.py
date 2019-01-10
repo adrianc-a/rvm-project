@@ -5,7 +5,7 @@
 __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
               and Leo Zeitler"
 
-from kernels import linearKernel, polynomialKernel, RBFKernel
+from kernels import linearKernel, linearSplineKernel, polynomialKernel, RBFKernel
 from scipy.optimize import minimize
 from scipy.special import expit
 
@@ -24,12 +24,12 @@ class RVM:
             kernelName,
             p=3,
             sigma=2,
-            alpha=10**5, # big alpha == big search space
+            alpha=10**5,
             beta=3,
             convergenceThresh=10**-7,
             alphaThresh=10**8,
             learningRate=0.2,
-            maxIter = 3000 # maximum number of iterations til convergence
+            maxIter = 3000
             ):
         """
         RVM parameters initialization
@@ -75,6 +75,9 @@ class RVM:
         """
         if self.kernelName == 'linearKernel':
             return linearKernel, None
+
+        if self.kernelName == 'linearSplineKernel':
+            return linearSplineKernel, None
 
         elif self.kernelName == 'RBFKernel':
             return RBFKernel, self.sigma
@@ -155,9 +158,9 @@ class RVM:
         self.covPosterior = self.covPosterior[np.ix_(useful, useful)]
         self.muPosterior = self.muPosterior[useful]
 
-    def _reestimatingAlphaBeta(self):
+    def _reestimateAlphaBeta(self):
         """
-        Re estimates alpha and beta values according to the paper
+        Re-estimates alpha and beta values according to the paper
         """
         gamma = 1 - self.alpha * np.diag(self.covPosterior)
         self.alpha = gamma / (self.muPosterior ** 2)
@@ -194,13 +197,10 @@ class RVR(RVM):
         """
         alphaOld = 0 * np.ones(self.N+1)
 
-        storeAlphas = []
-        iteration = 0
-
         for i in range(self.maxIter):
             alphaOld = np.array(self.alpha)
 
-            self._reestimatingAlphaBeta()
+            self._reestimateAlphaBeta()
             self._prune()
             self._posterior()
 

@@ -1,39 +1,36 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 
 """rvm.py: Relevance Vector Machine (RVM) for regression and classification."""
 
 __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
               and Leo Zeitler"
 
+from kernels import linearKernel, linearSplineKernel, polynomialKernel, RBFKernel, cosineKernel
 
-from kernels import linearKernel, polynomialKernel, RBFKernel, cosineKernel
 from scipy.optimize import minimize
 from scipy.special import expit
 
 import math
 import numpy as np
 
-
 class RVM:
     """Relevance Vector Machine class implementation based on Mike Tipping's
     The Relevance Vector Machine (2000)
 
     """
-
     def __init__(
             self,
             X,
             T,
             kernelName,
-            p=1,
-            sigma=5,
-            # Big alpha since we want to cover a lot of weight values
-            # See evidence part of last assignment
-            alpha=10**6,
+            p=3,
+            sigma=2,
+            alpha=10**5,
             beta=3,
-            convergenceThresh=10**-5,
-            alphaThresh=10**7,
-            learningRate=1e0
+            convergenceThresh=10**-7,
+            alphaThresh=10**8,
+            learningRate=0.2,
+            maxIter = 3000
             ):
         """
         RVM parameters initialization
@@ -66,6 +63,7 @@ class RVM:
         self.convergenceThresh = convergenceThresh
         self.alphaThresh = alphaThresh
         self.learningRate = learningRate
+        self.maxIter = maxIter
 
         self.alpha = alpha * np.random.rand(self.N + 1)
 
@@ -79,6 +77,9 @@ class RVM:
         """
         if self.kernelName == 'linearKernel':
             return linearKernel, None
+
+        if self.kernelName == 'linearSplineKernel':
+            return linearSplineKernel, None
 
         elif self.kernelName == 'RBFKernel':
             return RBFKernel, self.sigma
@@ -106,10 +107,13 @@ class RVM:
         return kernel_output.dot(self.muPosterior)
 
     def _setCovAndMu(self):
+        """
+        Set the covariance and the mean according to the recent alpha and beta values
+        """
         self.covPosterior = np.linalg.inv(
             np.diag(self.alpha) + self.beta * np.dot(self.phi.T, self.phi))
-        self.muPosterior = self.beta * \
-                           np.dot(np.dot(self.covPosterior, self.phi.T), self.T)
+        self.muPosterior = self.beta * np.dot(self.covPosterior, self.phi.T).dot(self.T)
+
 
     def _initPhi(self, X):
         """
@@ -139,6 +143,7 @@ class RVM:
         Prunes alpha such that only relevant weights are kept
         """
         useful = self.alpha < self.alphaThresh
+        
         self.alpha = self.alpha[useful]
         self.covPosterior = self.covPosterior[np.ix_(useful, useful)]
         self.muPosterior = self.muPosterior[useful]
@@ -157,9 +162,16 @@ class RVM:
 
         return alphaOld[useful]
 
-    def _reestimatingAlphaBeta(self):
+        else:
+            raise RuntimeError
+
+        self.alpha = self.alpha[useful]
+        self.covPosterior = self.covPosterior[np.ix_(useful, useful)]
+        self.muPosterior = self.muPosterior[useful]
+
+    def _reestimateAlphaBeta(self):
         """
-        Re estimates alpha and beta values according to the paper
+        Re-estimates alpha and beta values according to the paper
         """
         gamma = 1 - self.alpha * np.diag(self.covPosterior)
         self.alpha = gamma / (self.muPosterior ** 2)
@@ -196,12 +208,15 @@ class RVR(RVM):
         """
         alphaOld = 0 * np.ones(self.N+1)
 
-        while abs(sum(self.alpha) - sum(alphaOld)) >= self.convergenceThresh:
+        for i in range(self.maxIter):
             alphaOld = np.array(self.alpha)
 
-            self._reestimatingAlphaBeta()
+            self._reestimateAlphaBeta()
             self._prune()
             self._posterior()
+
+            if abs(sum(self.alpha) - sum(alphaOld)) <= self.convergenceThresh:
+                break
 
     def predict(self, unseen_x):
         """
@@ -214,7 +229,7 @@ class RVR(RVM):
         T (numpy.ndarray): predicted target values
 
         """
-        return self.rvm_output(unseen_x)
+        return np.asarray([self.rvm_output(x) for x in unseen_x])
 
 
 class RVC(RVM):
@@ -260,28 +275,10 @@ class RVC(RVM):
         return beta, sigmoid
 
     def _posterior(self, weights_new):
-        weights_save = self.muPosterior
-        self.muPosterior = weights_new
-        all_outputs, _ = self._likelihood()
-
-        posterior = 0.0
-        for i in range(len(all_outputs)):
-            posterior += self.T[i] * np.log(all_outputs[i])
-            posterior += (1-self.T[i]) * np.log(1 - all_outputs[i])
-        posterior -= 0.5 * self.muPosterior.T.dot(np.dot(np.diag(self.alpha), weights_new))
-
-        self.muPosterior = weights_save
-        return -posterior
+        pass
 
     def _posteriorGradient(self, weights_new):
-        weights_save = self.muPosterior
-        self.muPosterior = weights_new
-        all_outputs, _ = self._likelihood()
-        ret = self.phi.T.dot(self.T - all_outputs) - np.diag(self.alpha).dot(weights_new)
-        self.muPosterior = weights_save
-
-        return -ret
-
+        pass
 
     def fit(self):
         alphaOld = 0 * np.ones(self.N + 1)

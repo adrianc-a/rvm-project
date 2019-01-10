@@ -1,10 +1,9 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 
 """rvm.py: Relevance Vector Machine (RVM) for regression and classification."""
 
 __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
               and Leo Zeitler"
-
 
 from kernels import linearKernel, polynomialKernel, RBFKernel
 from scipy.optimize import minimize
@@ -13,27 +12,24 @@ from scipy.special import expit
 import math
 import numpy as np
 
-
 class RVM:
     """Relevance Vector Machine class implementation based on Mike Tipping's
     The Relevance Vector Machine (2000)
 
     """
-
     def __init__(
             self,
             X,
             T,
             kernelName,
             p=3,
-            sigma=5,
-            # Big alpha since we want to cover a lot of weight values
-            # See evidence part of last assignment
-            alpha=1000,
+            sigma=2,
+            alpha=10**5, # big alpha == big search space
             beta=3,
-            convergenceThresh=10**-9,
-            alphaThresh=10**9,
-            learningRate=0.2
+            convergenceThresh=10**-7,
+            alphaThresh=10**8,
+            learningRate=0.2,
+            maxIter = 3000 # maximum number of iterations til convergence
             ):
         """
         RVM parameters initialization
@@ -66,6 +62,7 @@ class RVM:
         self.convergenceThresh = convergenceThresh
         self.alphaThresh = alphaThresh
         self.learningRate = learningRate
+        self.maxIter = maxIter
 
         self.alpha = alpha * np.ones(self.N + 1)
 
@@ -199,12 +196,18 @@ class RVR(RVM):
         """
         alphaOld = 0 * np.ones(self.N+1)
 
-        while abs(sum(self.alpha) - sum(alphaOld)) >= self.convergenceThresh:
+        storeAlphas = []
+        iteration = 0
+
+        for i in range(self.maxIter):
             alphaOld = np.array(self.alpha)
 
             self._reestimatingAlphaBeta()
             self._prune()
             self._posterior()
+
+            if abs(sum(self.alpha) - sum(alphaOld)) <= self.convergenceThresh:
+                break
 
     def predict(self, unseen_x):
         """

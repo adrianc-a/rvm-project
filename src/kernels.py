@@ -15,8 +15,8 @@ def linearKernel(x, y, *args):
     """Kernel for linear separation
 
     Args:
-    x (float): a datapoint
-    y (float): a datapoint
+    x (float or vector/list of multiple features): a datapoint
+    y (float or vector/list of multiple features): a datapoint
     *args (none)
 
     """
@@ -43,20 +43,20 @@ def polynomialKernel(x, y, *args):
     """Polynomial kernel for curved decision boundaries
 
     Args:
-    x (float): a datapoint
-    y (float): a datapoint
+    x (float or vector/list of multiple features): a datapoint
+    y (float or vector/list of multiple features): a datapoint
     *args (int): the degree of the polynomial
 
     """
-    return math.pow(x.T * y + 1, args[0])
+    return math.pow(np.dot(x,y) + 1, args[0])
 
 
 def RBFKernel(x, y, *args):
     """RBF kernel that uses explicit euclidian distance between x and y,
 
     Args:
-    x (float): a datapoint
-    y (float): a datapoint
+    x (float or vector/list of multiple features): a datapoint
+    y (float or vector/list of multiple features): a datapoint
     *args (float): sigma; controls the smoothness of the boundary
 
     """

@@ -49,3 +49,6 @@ def RBFKernel(x, y, *args):
 
     return math.exp(- num / denom)
 
+
+def cosineKernel(x, y, *args):
+    return (np.pi / 4.0) * np.cos(np.pi * 0.5 * np.linalg.norm(x - y))

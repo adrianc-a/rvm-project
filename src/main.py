@@ -19,6 +19,7 @@ np.random.seed(0)
 def initData(N, dataset, *args):
     """Initialize the data set traning and testing examples"""
     X, T = dataset(N, *args)
+    X = X.reshape(N, 1)
 
     X_train, X_test, T_train, T_test = train_test_split(
             X, T, test_size=0.2, random_state=42)

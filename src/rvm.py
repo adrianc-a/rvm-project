@@ -143,7 +143,7 @@ class RVM:
         Prunes alpha such that only relevant weights are kept
         """
         useful = self.alpha < self.alphaThresh
-        
+
         self.alpha = self.alpha[useful]
         self.covPosterior = self.covPosterior[np.ix_(useful, useful)]
         self.muPosterior = self.muPosterior[useful]
@@ -161,13 +161,6 @@ class RVM:
             # self.X = self.X[useful, :]
 
         return alphaOld[useful]
-
-        else:
-            raise RuntimeError
-
-        self.alpha = self.alpha[useful]
-        self.covPosterior = self.covPosterior[np.ix_(useful, useful)]
-        self.muPosterior = self.muPosterior[useful]
 
     def _reestimateAlphaBeta(self):
         """
@@ -212,7 +205,7 @@ class RVR(RVM):
             alphaOld = np.array(self.alpha)
 
             self._reestimateAlphaBeta()
-            self._prune()
+            self._prune(alphaOld)
             self._posterior()
 
             if abs(sum(self.alpha) - sum(alphaOld)) <= self.convergenceThresh:

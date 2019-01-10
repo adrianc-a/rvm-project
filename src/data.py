@@ -3,9 +3,9 @@
 import numpy as np
 
 
-def createSimpleClassData(n, scale=10):
-    X = np.random.random(n) * scale - scale/2.
-    T = X > 0 #np.random.random(n) * 2 - 1 > 0
+def createSimpleClassData(n, w, scale=10):
+    X = np.random.rand(n, 2) * scale - scale/2.
+    T = X.dot(w) > 0
     return X, T.astype(int)
 
 

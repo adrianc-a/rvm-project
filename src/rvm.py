@@ -102,9 +102,7 @@ class RVM:
         """
         self.covPosterior = np.linalg.inv(
             np.diag(self.alpha) + self.beta * np.dot(self.phi.T, self.phi))
-        subresult = np.dot(self.covPosterior, self.phi.T)
-        subresult = subresult.dot(self.T)
-        self.muPosterior = self.beta * subresult
+        self.muPosterior = self.beta * np.dot(self.covPosterior, self.phi.T).dot(self.T)
 
 
     def _initPhi(self, X):

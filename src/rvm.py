@@ -30,7 +30,8 @@ class RVM:
             convergenceThresh=10**-7,
             alphaThresh=10**8,
             learningRate=0.2,
-            maxIter = 3000
+            maxIter = 3000,
+            useFast = False
             ):
         """
         RVM parameters initialization
@@ -68,6 +69,8 @@ class RVM:
         self.alpha = alpha * np.ones(self.N + 1)
 
         self._setCovAndMu()
+
+        self.useFast = useFast
 
     def _get_kernel_function(self):
         """
@@ -134,6 +137,18 @@ class RVM:
             phi_x_n = [kernel(x_n, x_i, args) for x_i in X]
             phi_x_n = np.insert(phi_x_n, 0, 1)
             PHI[num] = phi_x_n
+
+        if self.useFast:
+            # Normalize PHI
+            PHI = PHI / PHI.sum(axis=1)[:, np.newaxis]
+
+            # Set the initial basis vector to be the one that has the largest
+            # projection with the targets
+            proj = np.dot(PHI.T, self.T)
+            idx = np.unravel_index(proj.argmax(), proj.shape)
+            basisInit = proj[idx]
+
+            # TODO: return something here?
 
         return PHI
 

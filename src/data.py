@@ -7,6 +7,18 @@ def createSimpleClassData(n, w, scale=10):
     return X, T.astype(int)
 
 
+def sinc_np(n, sigma):
+    """Generate noisy or noise-free data from the sinc function f(x) = sin(x)/x
+    Keyword arguments:
+    n -- the number of of data points to be generated
+    sigma -- noise variance
+    """
+    X = np.linspace(-10, 10, n)
+    T = np.sinc(X) + np.random.normal(0, sigma, n)
+
+    return X, T
+
+
 def sinc(n, sigma):
     """Generate noisy or noise-free data from the sinc function f(x) = sin(x)/x
     Keyword arguments:
@@ -14,6 +26,6 @@ def sinc(n, sigma):
     sigma -- noise variance
     """
     X = np.linspace(-10, 10, n)
-    T = np.nan_to_num(np.sin(X)/X) + np.random.normal(0, sigma, n)
+    T = np.nan_to_num(np.sin(X) / X) + np.random.normal(0, sigma, n)
 
     return X, T

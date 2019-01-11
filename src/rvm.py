@@ -143,7 +143,7 @@ class RVM:
         """
         useful = self.alpha < self.alphaThresh
         if useful.all():
-            return
+            return alphaOld
 
         if self.alpha.shape[0] == self.relevanceVectors.shape[0] + 1:
             self.relevanceVectors = self.relevanceVectors[useful[1:]]
@@ -209,10 +209,9 @@ class RVR(RVM):
             alphaOld = np.array(self.alpha)
 
             self._reestimateAlphaBeta()
-            self._prune(alphaOld)
+            alphaOld = self._prune(alphaOld)
             self._posterior()
-
-            if abs(sum(self.alpha) - sum(alphaOld)) <= self.convergenceThresh:
+            if np.linalg.norm(self.alpha - alphaOld) <= self.convergenceThresh:
                 break
 
     def predict(self, unseen_x):

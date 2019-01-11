@@ -14,6 +14,6 @@ def sinc(n, sigma):
     sigma -- noise variance
     """
     X = np.linspace(-10, 10, n)
-    T = np.nan_to_num(np.sin(X)/X) + np.random.normal(0, sigma, n)
+    T = np.sinc(X) + np.random.normal(0, sigma, n)
 
     return X, T

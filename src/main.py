@@ -28,35 +28,39 @@ def initData(N, dataset, *args):
 
 def main():
     N = 100 # number of data points
-    noiseVariance = 0.01**2
+    noiseVariance = .03
     dataFunction = sinc
 
     X_train, X_test, T_train, T_test = initData(N, sinc, noiseVariance)
 
-    clf = RVR(X_train, T_train, 'linearSplineKernel')
+    clf = RVR(X_train, T_train, 'RBFKernel')
     clf.fit()
 
     print("The relevance vectors:")
     print(clf.relevanceVectors)
 
-    # This is using training data -- should be changed of course
     T_pred = clf.predict(X_test)
 
     # Plot training data
-    plt.scatter(X_train, T_train, s=20, label='Training data')
+    X = np.linspace(-10, 10, 250)
+    plt.plot(X, np.sinc(X), label='orig func')
+    plt.scatter(X_train, T_train, label='Training noisy samples')
+    #plt.scatter(X_test, T_test, label='Testing noisy samples')
 
     # Plot predictions
-    plt.scatter(X_test, T_pred, s=20, color='r', label='Predictions')
+    #plt.scatter(X_test, T_pred, s=20, color='r', label='Predictions')
+    plt.plot(X, clf.predict(X), label='Prediction {\mu}')
 
     # Plot relevance vectors
-    plt.scatter(clf.relevanceVectors,
-                clf.T,
-                label="Relevance vectors",
-                s=50,
-                facecolors="none",
-                color="k",
-                zorder=1)
+    # plt.scatter(clf.relevanceVectors,
+    #             clf.T,
+    #             label="Relevance vectors",
+    #             s=50,
+    #             facecolors="none",
+    #             color="k",
+    #             zorder=1)
 
+    plt.ylim(-0.3, 1.1)
     plt.xlabel("x")
     plt.ylabel("t")
     plt.legend()

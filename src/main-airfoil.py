@@ -11,6 +11,7 @@ from rvm import RVR, RVC
 from sklearn.model_selection import train_test_split
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn import svm
 
 # Set a random seed
 np.random.seed(0)
@@ -39,20 +40,27 @@ def main():
 
     # X_train, X_test, T_train, T_test = initData(N, dataFunction, noiseVariance)
     X_train, X_test, T_train, T_test = initData(N, dataFunction)
-    clf = RVR(X_train, T_train, 'RBFKernel')
-    clf.fit()
+    # clf = RVR(X_train, T_train, 'RBFKernel')
+    clf = svm.SVR()
+    clf.fit(X_train, T_train)
+    # clf.fit()
 
-    print("Number of relevance vectors:")
-    print(len(clf.relevanceVectors))
+    print("Number of support vectors:")
+    #for RVM
+    # print(len(clf.relevanceVectors))
+    #for svm
+    print(len(clf.support_))
 
     # This is using training data -- should be changed of course
     T_pred = clf.predict(X_test)
-    relError = np.mean([abs(true - pred) / true for true, pred in zip(T_test, T_pred)])
-    absError = np.mean([abs(true - pred) for true, pred in zip(T_test, T_pred)])
-    stdRelError = np.std([abs(true - pred) / true for true, pred in zip(T_test, T_pred)])
-    stdAbsError = np.std([abs(true - pred) for true, pred in zip(T_test, T_pred)])
-    print("Mean absolute error: ", absError, " / std: ", stdAbsError)
-    print("Mean relative error: ", relError, " / std: ", stdRelError)
+    relError = [abs(true - pred) / true for true, pred in zip(T_test, T_pred)]
+    relErrorMean = np.mean(relError)
+    relErrorStd = np.std(relError)
+    absError = [abs(true - pred) for true, pred in zip(T_test, T_pred)]
+    absErrorMean = np.mean(absError)
+    absErrorStd = np.std(absError)
+    print("Mean absolute error: ", absErrorMean, " / std: ", absErrorStd)
+    print("Mean relative error: ", relErrorMean, " / std: ", relErrorStd)
 
     # number of features - plot every feature/data dimension
     for i in range(5):

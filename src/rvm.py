@@ -110,8 +110,8 @@ class RVM:
         Set the covariance and the mean according to the recent alpha and beta values
         """
         self.covPosterior = np.linalg.inv(
-            np.diag(self.alpha) + self.beta * np.dot(self.phi.T, self.phi))
-        self.muPosterior = self.beta * np.dot(self.covPosterior, self.phi.T).dot(self.T)
+            np.diag(self.alpha) + self.beta**-1 * np.dot(self.phi.T, self.phi))
+        self.muPosterior = self.beta**-1 * np.dot(self.covPosterior, self.phi.T).dot(self.T)
 
 
     def _initPhi(self, X):
@@ -147,15 +147,11 @@ class RVM:
 
         if self.alpha.shape[0] == self.relevanceVectors.shape[0] + 1:
             self.relevanceVectors = self.relevanceVectors[useful[1:]]
-            self.T = self.T[useful[1:]]
             self.phi = self.phi[:, useful]
-            self.phi = self.phi[useful[1:], :]
 
         elif self.alpha.shape[0] == self.relevanceVectors.shape[0]:
             self.relevanceVectors = self.relevanceVectors[useful]
-            self.T = self.T[useful]
             self.phi = self.phi[:, useful]
-            self.phi = self.phi[useful, :]
 
         else:
             raise RuntimeError
@@ -173,8 +169,8 @@ class RVM:
         gamma = 1 - self.alpha * np.diag(self.covPosterior)
         self.alpha = gamma / (self.muPosterior ** 2)
 
-        self.beta = (self.N - np.sum(gamma)) / \
-                    (np.linalg.norm(self.T - np.dot(self.phi, self.muPosterior)) ** 2)
+        self.beta = (np.linalg.norm(self.T - np.dot(self.phi, self.muPosterior)) ** 2) / \
+                    (self.N - np.sum(gamma))
 
     def fit(self):
         """
@@ -266,7 +262,7 @@ class RVC(RVM):
                          design matrix
 
         """
-        sigmoid = np.asarray([ 1 / (1 + np.exp(-self.rvm_output(x))) for x in self.relevanceVectors])
+        sigmoid = np.asarray([ 1 / (1 + np.exp(-self.rvm_output(x))) for x in self.X])
         beta = np.multiply(sigmoid, np.ones(sigmoid.shape) - sigmoid)
 
         return beta, sigmoid

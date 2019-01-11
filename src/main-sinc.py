@@ -27,10 +27,9 @@ def initData(N, dataset, *args):
 
 def main():
     N = 100 # number of data points
-    noiseVariance = 0.01**2
-    dataFunction = sinc
+    noiseSpread = 0.01
 
-    X_train, X_test, T_train, T_test = initData(N, sinc, noiseVariance)
+    X_train, X_test, T_train, T_test = initData(N, sinc, noiseSpread)
 
     clf = RVR(X_train, T_train, 'linearSplineKernel')
     clf.fit()
@@ -49,7 +48,7 @@ def main():
 
     # Plot relevance vectors
     plt.scatter(clf.relevanceVectors,
-                clf.T,
+                clf.predict(clf.relevanceVectors),
                 label="Relevance vectors",
                 s=50,
                 facecolors="none",

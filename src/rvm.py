@@ -56,8 +56,8 @@ class RVM:
         self.X = X
         self.T = T
         self.N = np.shape(X)[0]
-        self.phi = self._initPhi(X)
         self.relevanceVectors = np.copy(X)
+        self.phi = self._initPhi(X)
 
         self.beta = beta
         self.convergenceThresh = convergenceThresh
@@ -114,7 +114,7 @@ class RVM:
         self.muPosterior = self.beta * np.dot(self.covPosterior, self.phi.T).dot(self.T)
 
 
-    def _initPhi(self, X):
+    def _initPhi(self, X, without_bias=False):
         """
         Initialize the design matrix based on the specified kernel function.
 
@@ -126,16 +126,24 @@ class RVM:
         PHI (numpy.ndarray): the design matrix
 
         """
-        PHI = np.ones(self.N * (self.N+1)).reshape((self.N, self.N+1))
+        # in the begining these are the same
+        # but when we are calculating the predictive posterior, they will not be
+        m = X.shape[0]
+        n = self.relevanceVectors.shape[0]
+        phi = np.ones((m, n + 1))
+
+        if without_bias:
+            phi = np.ones((m, n))
 
         kernel, args = self._get_kernel_function()
 
         for num, x_n in enumerate(X):
-            phi_x_n = [kernel(x_n, x_i, args) for x_i in X]
-            phi_x_n = np.insert(phi_x_n, 0, 1)
-            PHI[num] = phi_x_n
+            phi_x_n = [kernel(x_n, x_i, args) for x_i in self.relevanceVectors]
+            if not without_bias:
+                phi_x_n = np.insert(phi_x_n, 0, 1)
+            phi[num] = phi_x_n
 
-        return PHI
+        return phi
 
     def _prune(self, alphaOld):
         """
@@ -225,7 +233,11 @@ class RVR(RVM):
         T (numpy.ndarray): predicted target values
 
         """
-        return np.asarray([self.rvm_output(x) for x in unseen_x])
+
+        phi = self._initPhi(unseen_x, without_bias=True).T
+        variances = 1.0/self.beta + np.diag(phi.T.dot(self.covPosterior.dot(phi)))
+
+        return np.asarray([self.rvm_output(x) for x in unseen_x]), variances
 
 
 

@@ -27,7 +27,7 @@ def main():
     print(clf.relevanceVectors)
 
     # This is using training data -- should be changed of course
-    TPred = clf.predict(Xtest)
+    TPred, _ = clf.predict(Xtest)
 
     correct_classifications = Xtest.dot(w) > 0
     pos_data = Xtest[correct_classifications == True]

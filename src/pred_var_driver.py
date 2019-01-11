@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-"""main.py: Relevance Vector Machine (RVM) for regression and classification."""
+"""pred_var_driver.py: """
 
 __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
               and Leo Zeitler"
@@ -28,37 +28,42 @@ def initData(N, dataset, *args):
 
 def main():
     N = 100 # number of data points
-    noiseVariance = .03
-    dataFunction = sinc
+    noiseVariance = .05
 
     X_train, X_test, T_train, T_test = initData(N, sinc, noiseVariance)
 
-    clf = RVR(X_train, T_train, 'RBFKernel')
+    X_train = X_train.reshape((X_train.shape[0], 1))
+
+    clf = RVR(X_train, T_train, 'RBFKernel', convergenceThresh=10e-1)
     clf.fit()
 
     print("The relevance vectors:")
     print(clf.relevanceVectors)
 
-    T_pred = clf.predict(X_test)
+    T_pred, variances = clf.predict(X_test)
 
     # Plot training data
-    X = np.linspace(-10, 10, 250)
+    X = np.linspace(-10, 10, 250).reshape((250, 1))
     plt.plot(X, np.sinc(X), label='orig func')
     plt.scatter(X_train, T_train, label='Training noisy samples')
     #plt.scatter(X_test, T_test, label='Testing noisy samples')
 
     # Plot predictions
-    #plt.scatter(X_test, T_pred, s=20, color='r', label='Predictions')
-    plt.plot(X, clf.predict(X), label='Prediction {\mu}')
+
+
+    pred, vars = clf.predict(X)
+    plt.scatter(X_test, T_pred, s=20, color='r', label='Predictions')
+    plt.plot(X, pred, label='Prediction {\mu}')
+    plt.fill_between(X_test, T_pred - variances, T_pred + variances, color='gray', label='predictive variance')
 
     # Plot relevance vectors
-    # plt.scatter(clf.relevanceVectors,
-    #             clf.T,
-    #             label="Relevance vectors",
-    #             s=50,
-    #             facecolors="none",
-    #             color="k",
-    #             zorder=1)
+    plt.scatter(clf.relevanceVectors,
+                clf.T,
+                label="Relevance vectors",
+                s=50,
+                facecolors="none",
+                color="k",
+                zorder=1)
 
     plt.ylim(-0.3, 1.1)
     plt.xlabel("x")

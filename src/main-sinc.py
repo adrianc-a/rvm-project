@@ -27,7 +27,7 @@ def initData(N, dataset, *args):
 
 def main():
     N = 100 # number of data points
-    noiseSpread = 0.01
+    noiseSpread = 0.2
 
     X_train, X_test, T_train, T_test = initData(N, sinc, noiseSpread)
 
@@ -36,6 +36,7 @@ def main():
 
     print("The relevance vectors:")
     print(clf.relevanceVectors)
+    print("Beta:", np.sqrt(clf.beta**-1))
 
     # This is using training data -- should be changed of course
     T_pred = clf.predict(X_test)

@@ -110,8 +110,8 @@ class RVM:
         Set the covariance and the mean according to the recent alpha and beta values
         """
         self.covPosterior = np.linalg.inv(
-            np.diag(self.alpha) + self.beta**-1 * np.dot(self.phi.T, self.phi))
-        self.muPosterior = self.beta**-1 * np.dot(self.covPosterior, self.phi.T).dot(self.T)
+            np.diag(self.alpha) + self.beta * np.dot(self.phi.T, self.phi))
+        self.muPosterior = self.beta * np.dot(self.covPosterior, self.phi.T).dot(self.T)
 
 
     def _initPhi(self, X):
@@ -169,8 +169,7 @@ class RVM:
         gamma = 1 - self.alpha * np.diag(self.covPosterior)
         self.alpha = gamma / (self.muPosterior ** 2)
 
-        self.beta = (np.linalg.norm(self.T - np.dot(self.phi, self.muPosterior)) ** 2) / \
-                    (self.N - np.sum(gamma))
+        self.beta = (self.N - np.sum(gamma)) / (np.linalg.norm(self.T - np.dot(self.phi, self.muPosterior)) ** 2)
 
     def fit(self):
         """

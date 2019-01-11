@@ -297,7 +297,7 @@ class RVC(RVM):
             #
             # self.covPosterior = np.linalg.inv(-second_derivative)
 
-            self._reestimatingAlphaBeta()
+            self._reestimateAlphaBeta()
             alphaOld = self._prune(alphaOld)
             #print(np.linalg.norm(self.alpha - alphaOld))
             iters += 1

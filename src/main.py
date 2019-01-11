@@ -17,6 +17,7 @@ np.random.seed(0)
 
 
 def initData(N, dataset, *args):
+    print("blabla")
     """Initialize the data set traning and testing examples"""
     X, T = dataset(N, *args)
 
@@ -31,7 +32,7 @@ def main():
     noiseVariance = 0.01**2
     dataFunction = sinc
 
-    X_train, X_test, T_train, T_test = initData(N, sinc, noiseVariance)
+    X_train, X_test, T_train, T_test = initData(N, dataFunction, noiseVariance)
 
     clf = RVR(X_train, T_train, 'linearSplineKernel')
     clf.fit()

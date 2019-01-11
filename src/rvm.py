@@ -123,7 +123,7 @@ class RVM:
         kernelName (str): the kernel function
 
         Returns:
-        PHI (numpy.ndarray): the design matrix
+        PHI (numpy.ndarrafy): the design matrix
 
         """
         PHI = np.ones(self.N * (self.N+1)).reshape((self.N, self.N+1))
@@ -203,7 +203,6 @@ class RVR(RVM):
         """
         Fit the training data
         """
-        alphaOld = 0 * np.ones(self.N+1)
 
         for i in range(self.maxIter):
             alphaOld = np.array(self.alpha)
@@ -211,8 +210,12 @@ class RVR(RVM):
             self._reestimateAlphaBeta()
             self._prune(alphaOld)
             self._posterior()
-
+            if i == self.maxIter - 1:
+                print("*** NOT CONVERGED ***")
+                print("alpha: ", self.alpha, "\n beta: ", self.beta)
             if abs(sum(self.alpha) - sum(alphaOld)) <= self.convergenceThresh:
+                print("*** CONVERGED ***")
+                print("alpha: ", self.alpha, "\n beta: ", self.beta)
                 break
 
     def predict(self, unseen_x):

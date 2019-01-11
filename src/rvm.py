@@ -30,7 +30,7 @@ class RVM:
             convergenceThresh=10**-7,
             alphaThresh=10**9,
             learningRate=0.2,
-            maxIter = 3000
+            maxIter = 5000
             ):
         """
         RVM parameters initialization

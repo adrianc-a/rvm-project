@@ -5,7 +5,8 @@
 __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
               and Leo Zeitler"
 
-from kernels import linearKernel, linearSplineKernel, polynomialKernel, RBFKernel, cosineKernel
+from kernels import linearKernel, linearSplineKernel, polynomialKernel, \
+    RBFKernel, cosineKernel
 
 from scipy.optimize import minimize
 from scipy.special import expit
@@ -13,11 +14,13 @@ from scipy.special import expit
 import math
 import numpy as np
 
+
 class RVM:
     """Relevance Vector Machine class implementation based on Mike Tipping's
     The Relevance Vector Machine (2000)
 
     """
+
     def __init__(
             self,
             X,
@@ -25,13 +28,13 @@ class RVM:
             kernelName,
             p=3,
             sigma=2,
-            alpha=10**5,
+            alpha=10 ** 5,
             beta=3,
-            convergenceThresh=10**-7,
-            alphaThresh=10**8,
+            convergenceThresh=10 ** -7,
+            alphaThresh=10 ** 8,
             learningRate=0.2,
-            maxIter = 3000
-            ):
+            maxIter=3000
+    ):
         """
         RVM parameters initialization
 
@@ -96,7 +99,8 @@ class RVM:
         :return: the sum over the weighted kernel functions (float)
         """
         kernel, args = self._get_kernel_function()
-        kernel_output = [kernel(unseen_x, x_i, args) for x_i in self.relevanceVectors]
+        kernel_output = [kernel(unseen_x, x_i, args) for x_i in
+                         self.relevanceVectors]
         kernel_output = np.asarray(kernel_output)
         if kernel_output.shape[0] + 1 == self.muPosterior.shape[0]:
             kernel_output = np.insert(kernel_output, 0, 1)
@@ -111,8 +115,8 @@ class RVM:
         """
         self.covPosterior = np.linalg.inv(
             np.diag(self.alpha) + self.beta * np.dot(self.phi.T, self.phi))
-        self.muPosterior = self.beta * np.dot(self.covPosterior, self.phi.T).dot(self.T)
-
+        self.muPosterior = self.beta * np.dot(self.covPosterior,
+                                              self.phi.T).dot(self.T)
 
     def _initPhi(self, X):
         """
@@ -126,7 +130,7 @@ class RVM:
         PHI (numpy.ndarray): the design matrix
 
         """
-        PHI = np.ones(self.N * (self.N+1)).reshape((self.N, self.N+1))
+        PHI = np.ones(self.N * (self.N + 1)).reshape((self.N, self.N + 1))
 
         kernel, args = self._get_kernel_function()
 
@@ -169,7 +173,8 @@ class RVM:
         gamma = 1 - self.alpha * np.diag(self.covPosterior)
         self.alpha = gamma / (self.muPosterior ** 2)
 
-        self.beta = (self.N - np.sum(gamma)) / (np.linalg.norm(self.T - np.dot(self.phi, self.muPosterior)) ** 2)
+        self.beta = (self.N - np.sum(gamma)) / (np.linalg.norm(
+            self.T - np.dot(self.phi, self.muPosterior)) ** 2)
 
     def fit(self):
         """
@@ -188,6 +193,7 @@ class RVR(RVM):
     """
     Relevance Vector Machine regression
     """
+
     def _posterior(self):
         """
         Compute the posterior distribution over the weights
@@ -198,7 +204,7 @@ class RVR(RVM):
         """
         Fit the training data
         """
-        alphaOld = 0 * np.ones(self.N+1)
+        alphaOld = 0 * np.ones(self.N + 1)
 
         for i in range(self.maxIter):
             alphaOld = np.array(self.alpha)
@@ -223,6 +229,49 @@ class RVR(RVM):
         return np.asarray([self.rvm_output(x) for x in unseen_x])
 
 
+class RVMRS(RVR):
+
+    def __init__(self, X, T, kernelName, p=3, sigma=2, alpha=10 ** 5, beta=3,
+                 convergenceThresh=10 ** -7, alphaThresh=10 ** 8,
+                 learningRate=0.2, maxIter=3000):
+        super().__init__(X, T, kernelName, p, sigma, alpha, beta,
+                         convergenceThresh, alphaThresh, learningRate, maxIter)
+        self.keptBasisFuncs = np.arange(self.N)
+
+    def _prune(self, alphaOld):
+        ret = super()._prune(alphaOld)
+        saved = self.alpha < self.alphaThresh
+
+        self.keptBasisFuncs = self.keptBasisFuncs[saved]
+
+        return ret
+
+    def predict(self, unseen_x):
+        p_mu, p_sig2 = super().predict(unseen_x)
+
+        kernel, args = self._get_kernel_function()
+
+        a_s = 1.0 / np.var(self.T)
+        # new sample is a row
+        for r in range(unseen_x.shape[0]):
+            xs = unseen_x[r, :]
+            phi_s = np.array([kernel(xs, xi, args) for xi in self.X]).T
+            phi_xs = kernel(xs, xs, args)
+            phi_x = np.array([kernel(self.X[i, :], xs) if i != 0 else 1 for i in
+                              self.keptBasisFuncs])
+
+            q = phi_s.T.dot(self.T - self.phi.dot(self.muPosterior)) * self.beta
+            e = phi_xs - self.beta * phi_x.dot(
+                self.covPosterior.dot(self.phi.dot(phi_s)))
+
+            a = (1 / np.diag(self.alpha)).dot(self.phi.T)
+            s = phi_s.T.dot(np.linalg.inv(
+                1 / self.beta * np.eye(self.N) + self.phi.dot(a))).dot(phi_s)
+
+            p_mu[r] += (e * q) / (a_s + s)
+            p_sig2[r] += (e ** 2) / (a_s + s)
+        return p_mu, p_sig2
+
 
 class RVC(RVM):
     """
@@ -235,14 +284,19 @@ class RVC(RVM):
 
         second_derivative = None
         iters = 0
-        while iters < 30 and np.linalg.norm(self.muPosterior - weights_old) >= self.convergenceThresh:
+        while iters < 30 and np.linalg.norm(
+                self.muPosterior - weights_old) >= self.convergenceThresh:
             recent_likelihood, sigmoid = self._likelihood()
             recent_likelihood_matrix = np.diag(recent_likelihood)
-            second_derivative = -(np.dot(self.phi.transpose().dot(recent_likelihood_matrix), self.phi) + a)
-            first_derivative = self.phi.transpose().dot(self.T - sigmoid) - a.dot(self.muPosterior)
+            second_derivative = -(np.dot(
+                self.phi.transpose().dot(recent_likelihood_matrix),
+                self.phi) + a)
+            first_derivative = self.phi.transpose().dot(
+                self.T - sigmoid) - a.dot(self.muPosterior)
 
             weights_old = np.copy(self.muPosterior)
-            self.muPosterior -= self.learningRate * np.linalg.solve(second_derivative, first_derivative)
+            self.muPosterior -= self.learningRate * np.linalg.solve(
+                second_derivative, first_derivative)
             print(np.linalg.norm(self.muPosterior - weights_old))
 
             iters += 1
@@ -261,7 +315,8 @@ class RVC(RVM):
                          design matrix
 
         """
-        sigmoid = np.asarray([ 1 / (1 + np.exp(-self.rvm_output(x))) for x in self.X])
+        sigmoid = np.asarray(
+            [1 / (1 + np.exp(-self.rvm_output(x))) for x in self.X])
         beta = np.multiply(sigmoid, np.ones(sigmoid.shape) - sigmoid)
 
         return beta, sigmoid
@@ -276,7 +331,7 @@ class RVC(RVM):
         alphaOld = 0 * np.ones(self.N + 1)
 
         iters = 0
-        while np.linalg.norm(self.alpha - alphaOld) >= self.convergenceThresh\
+        while np.linalg.norm(self.alpha - alphaOld) >= self.convergenceThresh \
                 and iters < 10:
             alphaOld = np.array(self.alpha)
 
@@ -293,7 +348,7 @@ class RVC(RVM):
 
             self._reestimateAlphaBeta()
             alphaOld = self._prune(alphaOld)
-            #print(np.linalg.norm(self.alpha - alphaOld))
+            # print(np.linalg.norm(self.alpha - alphaOld))
             iters += 1
 
     def predict(self, unseen_x):
@@ -303,5 +358,5 @@ class RVC(RVM):
         :return: prediction values and
         """
         return np.asarray(
-            [1.0/(1.0+math.exp(-self.rvm_output(x))) for x in unseen_x]
+            [1.0 / (1.0 + math.exp(-self.rvm_output(x))) for x in unseen_x]
         )

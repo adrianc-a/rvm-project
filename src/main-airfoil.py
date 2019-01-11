@@ -24,24 +24,21 @@ np.random.seed(0)
 #
 
 def initData(N, dataset): #*args
-    """Initialize the data set traning and testing examples"""
+    """Initialize the data set training and testing examples"""
     # X, T = dataset(N, *args)
     X, T = dataset(N)
-
     X_train, X_test, T_train, T_test = train_test_split(
             X, T, test_size=0.2, random_state=42)
-
     return X_train, X_test, T_train, T_test
 
 
 def main():
-    N = 1000 # number of data points
+    N = 1600 # number of data points
     noiseVariance = 0.01**2
-    dataFunction = sinc
+    dataFunction = airfoil
 
-    # X_train, X_test, T_train, T_test = initData(N, sinc, noiseVariance)
-    X_train, X_test, T_train, T_test = initData(N, airfoil)
-    print("train data ", X_train)
+    # X_train, X_test, T_train, T_test = initData(N, dataFunction, noiseVariance)
+    X_train, X_test, T_train, T_test = initData(N, dataFunction)
     clf = RVR(X_train, T_train, 'RBFKernel')
     clf.fit()
 
@@ -49,15 +46,20 @@ def main():
     print(len(clf.relevanceVectors))
 
     # This is using training data -- should be changed of course
-    T_pred = clf.predict(X_train)
+    T_pred = clf.predict(X_test)
+    relError = np.mean([abs(true - pred) / true for true, pred in zip(T_test, T_pred)])
+    absError = np.mean([abs(true - pred) for true, pred in zip(T_test, T_pred)])
+    stdRelError = np.std([abs(true - pred) / true for true, pred in zip(T_test, T_pred)])
+    stdAbsError = np.std([abs(true - pred) for true, pred in zip(T_test, T_pred)])
+    print("Mean absolute error: ", absError, " / std: ", stdAbsError)
+    print("Mean relative error: ", relError, " / std: ", stdRelError)
 
+    # number of features - plot every feature/data dimension
     for i in range(5):
         # Plot training data
         plt.scatter(X_train[:,i], T_train, s=20, label='Training data')
-
         # Plot predictions
-        plt.scatter(X_train[:,i], T_pred, s=20, color='r', label='Predictions')
-
+        plt.scatter(X_test[:,i], T_pred, s=20, color='r', label='Predictions')
         # Plot relevance vectors
         plt.scatter(clf.relevanceVectors[:,i],
                 clf.T,

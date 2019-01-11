@@ -17,7 +17,6 @@ np.random.seed(0)
 
 
 def initData(N, dataset, *args):
-    print("blabla")
     """Initialize the data set traning and testing examples"""
     X, T = dataset(N, *args)
 
@@ -28,7 +27,7 @@ def initData(N, dataset, *args):
 
 
 def main():
-    N = 100 # number of data points
+    N = 150 # number of data points
     noiseVariance = 0.01**2
     dataFunction = sinc
 

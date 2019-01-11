@@ -28,7 +28,7 @@ class RVM:
             alpha=10**5,
             beta=3,
             convergenceThresh=10**-7,
-            alphaThresh=10**8,
+            alphaThresh=10**9,
             learningRate=0.2,
             maxIter = 3000
             ):
@@ -142,29 +142,32 @@ class RVM:
         Prunes alpha such that only relevant weights are kept
         """
         useful = self.alpha < self.alphaThresh
+        notUseful = self.alpha >= self.alphaThresh
+
         if useful.all():
             return
 
         if self.alpha.shape[0] == self.relevanceVectors.shape[0] + 1:
-            self.relevanceVectors = self.relevanceVectors[useful[1:]]
-            self.T = self.T[useful[1:]]
-            self.phi = self.phi[:, useful]
-            self.phi = self.phi[useful[1:], :]
+            self.relevanceVectors[notUseful[1:]] = 0
+            self.T[notUseful[1:]] = 0
+            self.phi[:, notUseful] = 0
+            self.phi[notUseful[1:], :] = 0
 
         elif self.alpha.shape[0] == self.relevanceVectors.shape[0]:
-            self.relevanceVectors = self.relevanceVectors[useful]
-            self.T = self.T[useful]
-            self.phi = self.phi[:, useful]
-            self.phi = self.phi[useful, :]
+            self.relevanceVectors[notUseful] = 0
+            self.T[notUseful] = 0
+            self.phi[:, notUseful] = 0
+            self.phi[notUseful, :] = 0
 
         else:
             raise RuntimeError
 
-        self.alpha = self.alpha[useful]
-        self.covPosterior = self.covPosterior[np.ix_(useful, useful)]
-        self.muPosterior = self.muPosterior[useful]
+        self.alpha[notUseful] = 0
+        self.covPosterior[np.ix_(notUseful, notUseful)] = 0
+        self.muPosterior[notUseful] = 0
+        alphaOld[notUseful] = 0
 
-        return alphaOld[useful]
+        return alphaOld
 
     def _reestimateAlphaBeta(self):
         """
@@ -205,6 +208,7 @@ class RVR(RVM):
         """
 
         for i in range(self.maxIter):
+            print(i)
             alphaOld = np.array(self.alpha)
 
             self._reestimateAlphaBeta()

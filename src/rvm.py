@@ -60,6 +60,7 @@ class RVM:
 
         self.useFast = useFast
         self.beta = beta
+
         if not self.useFast:
             self.alpha = alpha * np.ones(self.N + 1)
             self.phi = self._initPhi(X)
@@ -123,13 +124,11 @@ class RVM:
 
         self.muPosterior = self.beta * np.dot(self.covPosterior, self.phi.T).dot(self.T)
 
-
     def _computeInitAlpha(self, index, basisVector):
         squaredNorm = np.linalg.norm(basisVector) ** 2
+        denominator = (np.linalg.norm(basisVector.transpose().dot(self.T)) ** 2 / squaredNorm) - self.beta**-1
 
-        self.alphaCompare[index] = squaredNorm / ((
-            (np.linalg.norm(basisVector.transpose().dot(self.T)) ** 2) / squaredNorm
-        ) - (self.beta ** -1))
+        self.alphaCompare[index] = squaredNorm / denominator
         return np.asarray([self.alphaCompare[index]])
 
     def _initPhi(self, X):
@@ -154,8 +153,7 @@ class RVM:
             PHI[num] = phi_x_n
 
         if self.useFast:
-            self.phi = np.zeros((self.N, 1))
-            self.phi.transpose()[0, :] = np.ones(self.N)
+            self.phi = np.ones((self.N, 1))
 
         return PHI
 
@@ -203,43 +201,72 @@ class RVM:
 
         theta = (q ** 2) - s
 
+        newSigma = None
+        changedIndex = index
         if theta > 0:
             newAlpha = s ** 2 / ((q ** 2) - s)
             if self.alphaCompare[index] != np.inf:
                 maskIndex = np.argwhere(mask == index)[0][0]
                 self.alpha[maskIndex] = newAlpha
+                newSigma = None
+                changedIndex = None
             else:
                 maskIndices = np.argwhere(mask > index)
                 if maskIndices.shape[0] == 0:
                     if self.alpha.shape[0] == self.relevanceVectors.shape[0] + 1:
                         if index != 0:
-                            self.relevanceVectors = np.append(self.relevanceVectors, self.X[index - 1])
+                            if self.relevanceVectors.shape[0] == 0:
+                                self.relevanceVectors = np.asarray([self.X[index - 1]])
+                            else:
+                                self.relevanceVectors = np.append(self.relevanceVectors,
+                                                                  np.asarray([self.X[index - 1]]),
+                                                                  axis=0)
                     else:
                         if index == self.X.shape[0]:
-                            self.relevanceVectors = np.append(self.relevanceVectors, self.X[index - 1])
+                            if self.relevanceVectors.shape[0] == 0:
+                                self.relevanceVectors = np.asarray([self.X[index - 1]])
+                            else:
+                                self.relevanceVectors = np.append(self.relevanceVectors,
+                                                                  np.asarray([self.X[index - 1]]),
+                                                                  axis=0)
                         else:
-                            self.relevanceVectors = np.append(self.relevanceVectors, self.X[index])
+                            if self.relevanceVectors.shape[0] == 0:
+                                self.relevanceVectors = np.asarray([self.X[index]])
+                            else:
+                                self.relevanceVectors = np.append(self.relevanceVectors,
+                                                                  np.asarray([self.X[index]]),
+                                                                  axis=0)
 
                     self.alpha = np.append(self.alpha, newAlpha)
                     self.phi = np.append(self.phi,
                                          np.asarray([self.basisVectors.transpose()[index]]).reshape((self.N, 1)),
                                          axis=1)
+                    self.muPosterior = np.append(self.muPosterior, 1)
+
+                    changedIndex = self.alpha.shape[0] - 1
+                    newSigma = (newAlpha + sparsity) ** -1
+
                 else:
-                    if maskIndices[0][0] == 0:
-                        maskIndex = 0
-                    else:
-                        maskIndex = maskIndices[0][0] - 1
+                    maskIndex = maskIndices[0][0]
 
                     self.alpha = np.insert(self.alpha, maskIndex, newAlpha)
-                    self.phi = np.insert(self.phi, [maskIndex], np.asarray([self.basisVectors.transpose()[index]]).reshape((self.N, 1)), axis=1)
+                    self.phi = np.insert(self.phi, [maskIndex], np.asarray(
+                        [self.basisVectors.transpose()[index]]
+                    ).reshape((self.N, 1)), axis=1)
+                    self.muPosterior = np.insert(self.muPosterior, maskIndex, 1)
+
                     if self.alpha.shape[0] == self.relevanceVectors.shape[0] + 1:
                         if maskIndex != 0 and index != 0:
-                            self.relevanceVectors = np.insert(self.relevanceVectors, maskIndex - 1, self.X[index - 1])
-                        elif maskIndex == 0 and index != 0:
-                            self.relevanceVectors = np.insert(self.relevanceVectors, maskIndex, self.X[index - 1])
+                            self.relevanceVectors = np.insert(self.relevanceVectors, maskIndex - 1,
+                                                              np.asarray([self.X[index - 1]]),
+                                                              axis=0)
                     else:
-                        self.relevanceVectors = np.insert(self.relevanceVectors, maskIndex, self.X[index])
+                        self.relevanceVectors = np.insert(self.relevanceVectors,
+                                                          maskIndex, np.asarray([self.X[index]]),
+                                                          axis=0)
 
+                    changedIndex = maskIndex
+                    newSigma = (newAlpha + sparsity) ** -1
             self.alphaCompare[index] = newAlpha
         else:
             if self.alphaCompare[index] != np.inf:
@@ -247,13 +274,21 @@ class RVM:
                 self.alpha = np.delete(self.alpha, maskIndex)
                 if self.alpha.shape[0] == self.relevanceVectors.shape[0] + 1:
                     if maskIndex != 0 and index != 0:
-                        self.relevanceVectors = np.delete(self.relevanceVectors, maskIndex - 1)
-                    if maskIndex == 0 and index != 0:
-                        self.relevanceVectors = np.delete(self.relevanceVectors, maskIndex)
+                        self.relevanceVectors = np.delete(self.relevanceVectors, maskIndex - 1, axis=0)
                 else:
-                    self.relevanceVectors = np.delete(self.relevanceVectors, maskIndex)
+                    self.relevanceVectors = np.delete(self.relevanceVectors, maskIndex, axis=0)
+                if self.relevanceVectors.shape[0] == 0:
+                    self.relevanceVectors = np.asarray([])
                 self.phi = np.delete(self.phi, maskIndex, axis=1)
+                self.muPosterior = np.delete(self.muPosterior, maskIndex)
+                self.covPosterior = np.delete(self.covPosterior, maskIndex, axis=0)
+                self.covPosterior = np.delete(self.covPosterior, maskIndex, axis=1)
                 self.alphaCompare[index] = np.inf
+
+                newSigma = None
+                changedIndex = maskIndex
+
+        return changedIndex, newSigma
 
     def fit(self):
         """
@@ -288,32 +323,42 @@ class RVR(RVM):
         self._setCovAndMu()
 
     def _computeSQ(self, basisVector):
-        betaMatrix = self.beta * np.eye(basisVector.shape[0])
-        woodburyMatrix = np.dot(betaMatrix,
-                                np.dot(self.phi,
-                                       np.dot(self.covPosterior,
-                                              np.dot(self.phi.transpose(),
-                                                     betaMatrix
-                                                     )
-                                              )
-                                       )
-                                )
-        sparsity = basisVector.transpose().dot(np.dot(betaMatrix, basisVector)) - \
-            basisVector.transpose().dot(np.dot(woodburyMatrix, basisVector))
-        quality = basisVector.transpose().dot(np.dot(betaMatrix, self.T)) - \
-            basisVector.transpose().dot(np.dot(woodburyMatrix, self.T))
+        # betaMatrix = self.beta * np.eye(basisVector.shape[0])
+        # woodburyMatrix = np.dot(betaMatrix,
+        #                         np.dot(self.phi,
+        #                                np.dot(self.covPosterior,
+        #                                       np.dot(self.phi.transpose(),
+        #                                              betaMatrix
+        #                                              )
+        #                                       )
+        #                                )
+        #                         )
+        # sparsity = basisVector.transpose().dot(np.dot(betaMatrix, basisVector)) - \
+        #     basisVector.transpose().dot(np.dot(woodburyMatrix, basisVector))
+        # quality = basisVector.transpose().dot(np.dot(betaMatrix, self.T)) - \
+        #     basisVector.transpose().dot(np.dot(woodburyMatrix, self.T))
+
+        a = np.linalg.inv(np.diag(self.alpha))
+        cMatrix = np.linalg.inv(
+            self.beta**-1 * np.eye(basisVector.shape[0]) + self.phi.dot(np.dot(a, self.phi.transpose()))
+        )
+
+        sparsity = basisVector.transpose().dot(np.dot(cMatrix, basisVector))
+        quality = basisVector.transpose().dot(np.dot(cMatrix, self.T))
 
         return quality, sparsity
 
-    def _noiseLevelFast(self):
-        recentPrediction = self.predict(self.X)
-        # TODO WHY THE HELL DOES THIS GIVE GOOD RESULTS - random?
-        # self.beta = (self.N - self.phi.shape[1] + np.sum(self.alpha * np.diag(self.covPosterior))) / \
-        #             np.linalg.norm(self.T - recentPrediction)**-2
+    def _noiseLevelFast(self, changedIndex, newSigma):
 
-        self.beta = (self.N - self.phi.shape[1] + np.sum(self.alpha * np.diag(self.covPosterior))) / \
-                    ((np.linalg.norm(self.T - recentPrediction))**2)
-
+        if self.alpha.shape[0] == self.covPosterior.shape[0] + 1:
+            if changedIndex == self.covPosterior.shape[0]:
+                diagonal = np.append(np.diag(self.covPosterior), newSigma)
+            else:
+                diagonal = np.insert(np.diag(self.covPosterior), changedIndex, newSigma)
+        else:
+            diagonal = np.diag(self.covPosterior)
+        self.beta = ((np.linalg.norm(self.T - self.phi.dot(self.muPosterior))**2) /
+                     (self.N - self.alpha.shape[0] + self.alpha.dot(diagonal))) ** -1
 
     def fit(self):
         """
@@ -329,17 +374,18 @@ class RVR(RVM):
                     break
         else:
             alphaOld = np.ones(self.N+1)
+
             counter = 0
 
             while (self.alphaCompare[self.alphaCompare != np.inf].shape[0] != alphaOld[alphaOld != np.inf].shape[0] or
                             np.linalg.norm(self.alphaCompare[self.alphaCompare != np.inf]
-                                                   - alphaOld[alphaOld != np.inf]) > self.convergenceThresh):
+                            - alphaOld[alphaOld != np.inf]) > self.convergenceThresh):
                 alphaOld = np.copy(self.alphaCompare)
                 quality, sparsity = self._computeSQ(self.basisVectors.transpose()[counter % (self.N + 1)])
-                self._reestimateAlphaBetaFastAndPrune(counter % (self.N + 1), quality, sparsity)
+                changedIndex, newSigma = self._reestimateAlphaBetaFastAndPrune(counter % (self.N + 1), quality, sparsity)
                 # TODO needs to bring covPosterior into shape first. Does this destroy the calculation?
-                self._posterior()
-                self._noiseLevelFast()
+                # Amazing results when re estimation of beta is commented out. epsilon?
+                # self._noiseLevelFast(changedIndex, newSigma)
                 self._posterior()
                 counter += 1
 
@@ -352,7 +398,6 @@ class RVR(RVM):
 
         Returns:
         T (numpy.ndarray): predicted target values
-
         """
         return np.asarray([self.rvm_output(x) for x in unseen_x])
 
@@ -362,6 +407,28 @@ class RVC(RVM):
     """
     Relevance Vector Machine classification
     """
+
+    def _computeSQ(self, basisVector):
+        recent_likelihood, sigmoid = self._likelihood()
+        a = np.diag(self.alpha)
+
+        betaMatrix = np.diag(recent_likelihood)
+        target = self.phi.dot(self.muPosterior) + np.linalg.inv(betaMatrix).dot(self.T - sigmoid)
+        woodburyMatrix = np.dot(betaMatrix,
+                                np.dot(self.phi,
+                                       np.dot(self.covPosterior,
+                                              np.dot(self.phi.transpose(),
+                                                     betaMatrix
+                                                     )
+                                              )
+                                       )
+                                )
+        sparsity = basisVector.transpose().dot(np.dot(betaMatrix, basisVector)) - \
+                   basisVector.transpose().dot(np.dot(woodburyMatrix, basisVector))
+        quality = basisVector.transpose().dot(np.dot(betaMatrix, target)) - \
+                  basisVector.transpose().dot(np.dot(woodburyMatrix, target))
+
+        return quality, sparsity
 
     def irls(self):
         a = np.diag(self.alpha)
@@ -377,10 +444,8 @@ class RVC(RVM):
 
             weights_old = np.copy(self.muPosterior)
             self.muPosterior -= self.learningRate * np.linalg.solve(second_derivative, first_derivative)
-            print(np.linalg.norm(self.muPosterior - weights_old))
 
             iters += 1
-        print('Iterations used: ', iters)
         self.covPosterior = np.linalg.inv(-second_derivative)
 
     def _likelihood(self):
@@ -407,28 +472,31 @@ class RVC(RVM):
         pass
 
     def fit(self):
-        alphaOld = 0 * np.ones(self.N + 1)
+        if not self.useFast:
+            alphaOld = 0 * np.ones(self.N + 1)
 
-        iters = 0
-        while np.linalg.norm(self.alpha - alphaOld) >= self.convergenceThresh\
-                and iters < 10:
-            alphaOld = np.array(self.alpha)
+            iters = 0
+            while np.linalg.norm(self.alpha - alphaOld) >= self.convergenceThresh\
+                    and iters < 10:
+                alphaOld = np.array(self.alpha)
 
-            self.irls()
-            # optRes = minimize(self._posterior, np.random.randn(self.muPosterior.shape[0]), jac=self._posteriorGradient)
-            # self.muPosterior = optRes.x
-            # recent_likelihood, sigmoid = self._likelihood()
-            # recent_likelihood_matrix = np.diag(recent_likelihood)
-            # second_derivative = -(np.dot(
-            #     self.phi.transpose().dot(recent_likelihood_matrix),
-            #     self.phi) + np.diag(self.alpha))
-            #
-            # self.covPosterior = np.linalg.inv(-second_derivative)
+                self.irls()
+                self._reestimateAlphaBeta()
+                alphaOld = self._prune(alphaOld)
+                iters += 1
 
-            self._reestimateAlphaBeta()
-            alphaOld = self._prune(alphaOld)
-            #print(np.linalg.norm(self.alpha - alphaOld))
-            iters += 1
+        else:
+            alphaOld = np.ones(self.N + 1)
+
+            counter = 0
+            while (self.alphaCompare[self.alphaCompare != np.inf].shape[0] != alphaOld[alphaOld != np.inf].shape[0] or
+                           np.linalg.norm(self.alphaCompare[self.alphaCompare != np.inf]
+                                              - alphaOld[alphaOld != np.inf]) > self.convergenceThresh):
+                alphaOld = np.copy(self.alphaCompare)
+                quality, sparsity = self._computeSQ(self.basisVectors.transpose()[counter % (self.N + 1)])
+                self._reestimateAlphaBetaFastAndPrune(counter % (self.N + 1), quality, sparsity)
+                self.irls()
+                counter += 1
 
     def predict(self, unseen_x):
         """

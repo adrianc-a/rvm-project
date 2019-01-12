@@ -31,12 +31,13 @@ def main():
 
     X_train, X_test, T_train, T_test = initData(N, sinc, noiseSpread)
 
-    clf = RVR(X_train, T_train, 'linearSplineKernel', beta=0.001**-2, useFast=True)
+    # very sensible to initial value of beta (as described in the paper)
+    clf = RVR(X_train, T_train, 'linearSplineKernel', beta=0.001**-2, useFast=True, convergenceThresh=10**-10)
     clf.fit()
 
     print("The relevance vectors:")
     print(clf.relevanceVectors)
-    print("Beta:", np.sqrt(clf.beta**-1))
+    print("Spread:", np.sqrt(clf.beta**-1))
 
     # This is using training data -- should be changed of course
     T_pred = clf.predict(X_test)

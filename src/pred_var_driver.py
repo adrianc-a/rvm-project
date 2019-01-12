@@ -5,8 +5,8 @@
 __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
               and Leo Zeitler"
 
-from data import sinc, createSimpleClassData
-from rvm import RVR, RVC
+import data as datagen
+from rvm import RVR, RVC, RVMRS
 
 from sklearn.model_selection import train_test_split
 import numpy as np
@@ -16,56 +16,53 @@ import matplotlib.pyplot as plt
 np.random.seed(0)
 
 
-def initData(N, dataset, *args):
-    """Initialize the data set traning and testing examples"""
-    X, T = dataset(N, *args)
-
-    X_train, X_test, T_train, T_test = train_test_split(
-            X, T, test_size=0.2, random_state=42)
-
-    return X_train, X_test, T_train, T_test
-
 
 def main():
-    N = 100 # number of data points
-    noiseVariance = .05
+    N = 90 # number of data points
+    noiseStdDev = 0.05
 
-    X_train, X_test, T_train, T_test = initData(N, sinc, noiseVariance)
+    X_train,  T_train, = datagen.cos(N, noiseStdDev)
 
-    X_train = X_train.reshape((X_train.shape[0], 1))
+    T_train = T_train.reshape((N,))
 
-    clf = RVR(X_train, T_train, 'RBFKernel', convergenceThresh=10e-1)
-    clf.fit()
+    rvm_model = RVR(X_train, T_train, 'logKernel', convergenceThresh=10e-1)
+    rvm_model.fit()
+
+    rvm_star_model = RVMRS(X_train, T_train, 'logKernel', convergenceThresh=10e-1)
+    rvm_star_model.fit()
 
     print("The relevance vectors:")
-    print(clf.relevanceVectors)
-
-    T_pred, variances = clf.predict(X_test)
-
-    # Plot training data
-    X = np.linspace(-10, 10, 250).reshape((250, 1))
-    plt.plot(X, np.sinc(X), label='orig func')
-    plt.scatter(X_train, T_train, label='Training noisy samples')
-    #plt.scatter(X_test, T_test, label='Testing noisy samples')
+    print(rvm_model.relevanceVectors)
 
     # Plot predictions
+    X = np.linspace(-10, 55, 250).reshape((250, 1))
 
 
-    pred, vars = clf.predict(X)
-    plt.scatter(X_test, T_pred, s=20, color='r', label='Predictions')
-    plt.plot(X, pred, label='Prediction {\mu}')
-    plt.fill_between(X_test, T_pred - variances, T_pred + variances, color='gray', label='predictive variance')
+
+    pred, vars = rvm_model.predict(X)
+    pred_star, vars_star = rvm_star_model.predict(X)
+
+    std_devs = np.sqrt(vars)
+    std_devs_star = np.sqrt(vars_star)
+    plt.plot(X, pred, label='Prediction $\mu$')
+    plt.fill_between(X[:, 0], pred_star - 2 * std_devs_star , pred + 2 * std_devs_star, color='cyan', label='predictive variance')
+    plt.fill_between(X[:, 0], pred - 2 * std_devs , pred + 2 * std_devs, color='gray', label='predictive variance')
+
+    # Plot training data
+    plt.plot(X, np.cos(X), label='orig func')
+    plt.scatter(X_train, T_train, label='Training noisy samples')
+    # plt.scatter(X_test, T_test, label='Testing noisy samples')
 
     # Plot relevance vectors
-    plt.scatter(clf.relevanceVectors,
-                clf.T,
-                label="Relevance vectors",
-                s=50,
-                facecolors="none",
-                color="k",
-                zorder=1)
+    # plt.scatter(clf.relevanceVectors,
+    #             clf.T,
+    #             label="Relevance vectors",
+    #             s=50,
+    #             facecolors="none",
+    #             color="k",
+    #             zorder=1)
 
-    plt.ylim(-0.3, 1.1)
+    #plt.ylim(-0.3, 1.1)
     plt.xlabel("x")
     plt.ylabel("t")
     plt.legend()

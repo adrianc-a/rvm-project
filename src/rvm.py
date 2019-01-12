@@ -299,7 +299,7 @@ class RVC(RVM):
             weights_old = np.copy(self.muPosterior)
             self.muPosterior -= self.learningRate * np.linalg.solve(
                 second_derivative, first_derivative)
-            print(np.linalg.norm(self.muPosterior - weights_old))
+            #print(np.linalg.norm(self.muPosterior - weights_old))
 
             iters += 1
         print('Iterations used: ', iters)

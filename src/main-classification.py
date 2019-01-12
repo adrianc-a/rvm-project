@@ -20,14 +20,14 @@ def main():
     Xtrain, Ttrain = createSimpleClassData(N, w)
     Xtest, Ttest = createSimpleClassData(int(N / 3), w)
 
-    clf = RVC(Xtrain, Ttrain, 'cosineKernel', alphaThresh=10e8, convergenceThresh=10e-4)
+    clf = RVC(Xtrain, Ttrain, 'RBFKernel', alphaThresh=10e8, convergenceThresh=10e-2)
     clf.fit()
 
     print("The relevance vectors:")
     print(clf.relevanceVectors)
 
     # This is using training data -- should be changed of course
-    TPred, _ = clf.predict(Xtest)
+    TPred  = clf.predict(Xtest)
 
     correct_classifications = Xtest.dot(w) > 0
     pos_data = Xtest[correct_classifications == True]

@@ -7,6 +7,11 @@ def createSimpleClassData(n, w, scale=10):
     return X, T.astype(int)
 
 
+def linearClassification(train_n, test_n, w, scale=10):
+    return (createSimpleClassData(train_n, w, scale),
+            createSimpleClassData(test_n, w, scale))
+
+
 def sinc_np(n, sigma):
     """Generate noisy or noise-free data from the sinc function f(x) = sin(x pi)/x pi
     Keyword arguments:

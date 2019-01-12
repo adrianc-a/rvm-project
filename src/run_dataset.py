@@ -4,6 +4,7 @@ from sklearn import svm
 from numpy import linalg as la
 
 import time
+import numpy as np
 
 import data
 import rvm
@@ -13,7 +14,9 @@ REGRESSION_DATASETS = {
     'airfoil': lambda: data.airfoil_test_train(1050, 453)
 }
 
-CLASSIFICATION_DATASETS = {}
+CLASSIFICATION_DATASETS = {
+    'linear': lambda: data.linearClassification(100, 20, np.array([1, 1]))
+}
 
 
 def parse_args():
@@ -28,6 +31,10 @@ def parse_args():
         required=True
     )
 
+    parser.add_argument('-a', '--alpha-thresh', type=float, default=10e8)
+    parser.add_argument('-c', '--conv-thresh', type=float, default=10e-2)
+    parser.add_argument('-k', '--kernel', type=str, default='RBFKernel')
+
     return parser.parse_args(argv[1:])
 
 
@@ -38,12 +45,18 @@ def time_fit(func):
     return end - begin
 
 
-def run_regression_dataset(ds):
+def run_regression_dataset(ds, args):
     train, test = REGRESSION_DATASETS[ds]()
 
     # creating the models
-    rvm_model = rvm.RVR(train[0], train[1], 'RBFKernel')
-    rvm_star_model = rvm.RVMRS(train[0], train[1], 'RBFKernel')
+    rvm_model = rvm.RVR(
+        train[0], train[1], args.kernel, alphaThresh=args.alpha_thresh,
+        convergenceThresh=args.conv_thresh
+    )
+    rvm_star_model = rvm.RVMRS(
+        train[0], train[1], args.kernel, alphaThresh=args.alpha_thresh,
+        convergenceThresh=args.conv_thresh
+    )
     svm_model = svm.SVR(kernel='rbf')
 
     # timing the fitting...
@@ -72,19 +85,25 @@ def classification_accuracy(predictions, true_vals):
     return (predictions == true_vals).sum() / predictions.shape[0]
 
 
-def run_classification_dataset(ds):
+def run_classification_dataset(ds, args):
     train, test = CLASSIFICATION_DATASETS[ds]()
 
-    rvm_model = rvm.RVC(train[0], train[1], 'RBFKernel')
+    rvm_model = rvm.RVC(
+        train[0], train[1], args.kernel, alphaThresh=args.alpha_thresh,
+        convergenceThresh=args.conv_thresh
+    )
     svm_model = svm.SVC(kernel='rbf')
     
-    times = [
+    train_times = [
         time_fit(rvm_model.fit),
         time_fit(lambda: svm_model.fit(train[0], train[1]))
     ]
-    
+
     accuracies = [
-        classification_accuracy(rvm_model.predict(test[0]), test[1]),
+        classification_accuracy(
+            np.where(rvm_model.predict(test[0]) >= .5, 1, 0)
+            , test[1]
+        ),
         classification_accuracy(svm_model.predict(test[0]), test[1])
     ]
     
@@ -93,7 +112,7 @@ def run_classification_dataset(ds):
         svm_model.support_vectors_.shape[0]
     ]
     
-    return times, accuracies, num_vectors
+    return train_times, accuracies, num_vectors
 
 def main(args):
     for ds in args.dataset:
@@ -101,9 +120,9 @@ def main(args):
             raise RuntimeError(
                 'Dataset ' + ds + 'not in list of known datasets')
         elif ds in REGRESSION_DATASETS:
-            print(run_regression_dataset(ds))
+            print(run_regression_dataset(ds, args))
         elif ds in CLASSIFICATION_DATASETS:
-            print(run_classification_dataset(ds))
+            print(run_classification_dataset(ds, args))
 
 
 if __name__ == '__main__':

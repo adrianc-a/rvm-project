@@ -15,6 +15,7 @@ REGRESSION_DATASETS = {
 
 CLASSIFICATION_DATASETS = {}
 
+
 def parse_args():
     parser = ArgumentParser(
         description='Run and collect statistics for RVM/RVM*/SVM on specified data'
@@ -59,13 +60,40 @@ def run_regression_dataset(ds):
     ]
 
     num_vectors = [
-        rvm_model.relevance_vectors.shape[0],
-        rvm_star_model.relevance_vectors.shape[0],
+        rvm_model.relevanceVectors.shape[0],
+        rvm_star_model.relevanceVectors.shape[0],
         svm_model.support_vectors_.shape[0],
     ]
 
     return times, accuracies, num_vectors
 
+
+def classification_accuracy(predictions, true_vals):
+    return (predictions == true_vals).sum() / predictions.shape[0]
+
+
+def run_classification_dataset(ds):
+    train, test = CLASSIFICATION_DATASETS[ds]()
+
+    rvm_model = rvm.RVC(train[0], train[1], 'RBFKernel')
+    svm_model = svm.SVC(kernel='rbf')
+    
+    times = [
+        time_fit(rvm_model.fit),
+        time_fit(lambda: svm_model.fit(train[0], train[1]))
+    ]
+    
+    accuracies = [
+        classification_accuracy(rvm_model.predict(test[0]), test[1]),
+        classification_accuracy(svm_model.predict(test[0]), test[1])
+    ]
+    
+    num_vectors = [
+        rvm_model.relevanceVectors.shape[0],
+        svm_model.support_vectors_.shape[0]
+    ]
+    
+    return times, accuracies, num_vectors
 
 def main(args):
     for ds in args.dataset:
@@ -74,6 +102,8 @@ def main(args):
                 'Dataset ' + ds + 'not in list of known datasets')
         elif ds in REGRESSION_DATASETS:
             print(run_regression_dataset(ds))
+        elif ds in CLASSIFICATION_DATASETS:
+            print(run_classification_dataset(ds))
 
 
 if __name__ == '__main__':

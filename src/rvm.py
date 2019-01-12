@@ -143,7 +143,7 @@ class RVM:
         kernel, args = self._get_kernel_function()
 
         for num, x_n in enumerate(X):
-            phi_x_n = [kernel(x_n, x_i, args) for x_i in self.relevanceVectors]
+            phi_x_n = [kernel(x_n, x_i, args) for x_i in X]
             phi_x_n = np.insert(phi_x_n, 0, 1)
             phi[num] = phi_x_n
 

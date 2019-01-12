@@ -35,7 +35,14 @@ def cos(n, sigma):
     X = np.random.uniform(0, 10, size=(n, 1))
     T = np.cos(X) + np.random.normal(0, sigma, size=(n, 1))
 
-    return X, T
+    return X, T.reshape((n,))
+
+
+def linear(n, sigma):
+    x = np.random.uniform(0, 10, size=(n,1))
+    t = 1.2 * x**2 + x+2 + np.random.normal(0, sigma, size=(n, 1))
+
+    return x, t.reshape((n,))
 
 
 def airfoil(n1):

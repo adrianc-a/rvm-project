@@ -33,7 +33,7 @@ class RVM:
             convergenceThresh=10 ** -7,
             alphaThresh=10 ** 8,
             learningRate=0.2,
-            maxIter=3000
+            maxIter=100
     ):
         """
         RVM parameters initialization
@@ -286,7 +286,7 @@ class RVC(RVM):
 
         second_derivative = None
         iters = 0
-        while iters < 30 and np.linalg.norm(
+        while iters < self.maxIter and np.linalg.norm(
                 self.muPosterior - weights_old) >= self.convergenceThresh:
             recent_likelihood, sigmoid = self._likelihood()
             recent_likelihood_matrix = np.diag(recent_likelihood)

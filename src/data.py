@@ -8,7 +8,7 @@ def createSimpleClassData(n, w, scale=10):
 
 
 def sinc_np(n, sigma):
-    """Generate noisy or noise-free data from the sinc function f(x) = sin(x)/x
+    """Generate noisy or noise-free data from the sinc function f(x) = sin(x pi)/x pi
     Keyword arguments:
     n -- the number of of data points to be generated
     sigma -- noise variance
@@ -38,9 +38,13 @@ def cos(n, sigma):
     return X, T.reshape((n,))
 
 
+def cos_test_train(train_n, test_n, sigma):
+    return cos(train_n, sigma), cos(test_n, 0.0)
+
+
 def linear(n, sigma):
-    x = np.random.uniform(0, 10, size=(n,1))
-    t = 1.2 * x**2 + x+2 + np.random.normal(0, sigma, size=(n, 1))
+    x = np.random.uniform(0, 10, size=(n, 1))
+    t = 1.2 * x ** 2 + x + 2 + np.random.normal(0, sigma, size=(n, 1))
 
     return x, t.reshape((n,))
 

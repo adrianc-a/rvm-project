@@ -1,5 +1,7 @@
 import numpy as np
 import os
+import csv
+from sklearn.datasets import make_friedman2, make_friedman3, load_boston, load_breast_cancer
 
 
 def createSimpleClassData(n, w, scale=10):
@@ -37,6 +39,18 @@ def sinc(n, sigma):
     return X, T
 
 
+def sinc_uniform(n, lower=-1, upper=1):
+    """Generate noisy or noise-free data from the sinc function f(x) = sin(x)/x
+    Keyword arguments:
+    n -- the number of of data points to be generated
+    sigma -- noise variance
+    """
+    X = np.linspace(-10, 10, n)
+    T = np.nan_to_num(np.sin(X) / X) + np.random.uniform(low=lower, high=upper, size=n)
+
+    return X, T
+
+
 def cos(n, sigma):
     X = np.random.uniform(0, 10, size=(n, 1))
     T = np.cos(X) + np.random.normal(0, sigma, size=(n, 1))
@@ -55,10 +69,28 @@ def linear(n, sigma):
     return x, t.reshape((n,))
 
 
+def friedman_2(n, noise):
+    return make_friedman2(n_samples=n, noise=noise)
+
+
+def friedman_3(n, noise):
+    return make_friedman3(n_samples=n, noise=noise)
+
+
+def boston_housing(n):
+    (X, T) = load_boston(return_X_y=True)
+    return X[:n], T[:n]
+
+
+def breast_cancer(n):
+    (X, T) = load_breast_cancer(return_X_y=True)
+    return X[:n], T[:n]
+
+
 def airfoil(n=None, path=None):
     if not path:
         path = os.getcwd()
-    text_file = open(path + "/airFoil.dat", "r")
+    text_file = open(path + "/data/airFoil.dat", "r")
 
     if not n:
         lines = text_file.readlines()[:]
@@ -75,3 +107,60 @@ def airfoil(n=None, path=None):
         T[i] = float_list[-1]
     text_file.close()
     return X, T
+
+
+def slump(n=None, path=None):
+    if not path:
+        path = os.getcwd()
+
+    with open(path + "/data/slumpTest.dat") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=',')
+
+        X = []
+        T = []
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+            if line_count == 0:
+                line_count += 1
+                continue
+
+            X.append(np.asarray(row[1: 7], dtype=np.float64))
+            T.append(np.asarray(row[7:], dtype=np.float64))
+            line_count += 1
+
+        return X, T
+
+
+def banana(n=None, fileNumber=1, path=None):
+    if not path:
+        path = os.getcwd()
+
+    X = []
+    T = []
+    with open(path + "/data/banana/banana_train_data_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            X.append(np.asarray(row[:], dtype=np.float64))
+            line_count += 1
+
+    with open(path + "/data/banana/banana_train_labels_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            T.append(np.asarray(row[:], dtype=np.float64))
+            if T[-1][0] < 0:
+                T[-1][0] = 0
+            line_count += 1
+
+    return X, np.asarray(T).reshape(-1)

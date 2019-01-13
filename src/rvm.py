@@ -235,8 +235,9 @@ class RVR(RVM):
         phi = np.array([[kernel(self.X[i - 1, :], xs, args) if i != 0 else 1 for i in
                           self.keptBasisFuncs] for xs in unseen_x])
 
-        if self.X.shape[1] == 1:
-            self.X = self.X.reshape(-1)
+        # lmk if there is a better way to fix this...
+        # if self.X.shape[1] == 1:
+        #     self.X = self.X.reshape(-1)
 
         variances = 1.0/self.beta + np.diag(phi.dot(self.covPosterior.dot(phi.T)))
 

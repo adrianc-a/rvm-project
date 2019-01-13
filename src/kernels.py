@@ -63,7 +63,7 @@ def RBFKernel(x, y, *args):
     num = distance.euclidean(x, y)
     denom = 2 * args[0] ** 2
 
-    return math.exp(- num / denom)
+    return np.exp(-num / denom)
 
 
 def cosineKernel(x, y, *args):

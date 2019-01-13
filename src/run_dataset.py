@@ -178,22 +178,26 @@ def pprint(name, res):
     print('\tAvg fit time:', np.mean(res['fit_time']))
 
 def main(args):
+    if args.pretty_print:
+        pfunc = pprint
+    else:
+        pfunc = print
+
     for ds in args.dataset:
         if ds not in REGRESSION_DATASETS and ds not in CLASSIFICATION_DATASETS:
             raise RuntimeError(
                 'Dataset ' + ds + 'not in list of known datasets')
         elif ds in REGRESSION_DATASETS:
             rvm_res, rvm_s_res, svm_res = run_regression_dataset(ds, args)
-            if args.pretty_print:
-                pprint(' rvm', rvm_res)
-                pprint('rvm*', rvm_s_res)
-                pprint(' svm', svm_res)
-            else:
-                print(' rvm: ', rvm_res)
-                print('rvm*: ', rvm_s_res)
-                print(' svm: ', svm_res)
+
+            pfunc(' rvm', rvm_res)
+            pfunc('rvm*', rvm_s_res)
+            pfunc(' svm', svm_res)
+
         elif ds in CLASSIFICATION_DATASETS:
-            print(run_classification_dataset(ds, args))
+            rvm_res, svm_res = run_classification_dataset(ds, args)
+            pfunc('rvm', rvm_res)
+            pfunc('svm', svm_res)
 
 
 if __name__ == '__main__':

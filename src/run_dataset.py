@@ -13,11 +13,18 @@ import rvm
 
 REGRESSION_DATASETS = {
     'cos': lambda: data.cos(30, 0.1),
-    'airfoil': lambda: data.airfoil_test_train(1050, 453)
+    'airfoil': data.airfoil,
+    'friedman2': lambda: data.friedman_2(300, 0.1),
+    'friedman3': lambda: data.friedman_2(300, 0.1),
+    'boston': lambda: data.boston_housing(506),
+    'slump': data.slump,
+    'sinc': lambda: data.sinc(100, 0.1)
 }
 
 CLASSIFICATION_DATASETS = {
-    'linear': lambda: data.createSimpleClassData(100, np.array([1, 1]))
+    'linear': lambda: data.createSimpleClassData(100, np.array([1, 1])),
+    'breast-cancer': lambda: data.breast_cancer(569),
+    'banana': data.banana
 }
 
 
@@ -84,6 +91,7 @@ def create_kernel_callable(kname):
 def run_regression_dataset(ds, args):
     x, y = REGRESSION_DATASETS[ds]()
 
+    print('Read dataset')
     # creating the models
     rvm_model = lambda a, b: rvm.RVR(
         a, b, args.kernel, alphaThresh=args.alpha_thresh,
@@ -191,6 +199,7 @@ def main(args):
         pfunc = print
 
     for ds in args.dataset:
+        print('Dataset', ds)
         if ds not in REGRESSION_DATASETS and ds not in CLASSIFICATION_DATASETS:
             raise RuntimeError(
                 'Dataset ' + ds + 'not in list of known datasets')

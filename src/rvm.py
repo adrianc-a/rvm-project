@@ -34,7 +34,8 @@ class RVM:
             convergenceThresh=10 ** -7,
             alphaThresh=10 ** 8,
             learningRate=0.2,
-            maxIter=100
+            maxIter=100,
+            verbosity=0
     ):
         """
         RVM parameters initialization
@@ -59,6 +60,7 @@ class RVM:
 
         self.X = X
         self.T = T
+        self.relevanceTargets = T
         self.N = np.shape(X)[0]
         self.relevanceVectors = np.copy(X)
         self.phi = self._initPhi(X)
@@ -73,6 +75,8 @@ class RVM:
 
         self._setCovAndMu()
         self.keptBasisFuncs = np.arange(self.N + 1)
+
+        self.verbosity = verbosity
 
 
     def _get_kernel_function(self):
@@ -144,10 +148,12 @@ class RVM:
 
         if self.alpha.shape[0] == self.relevanceVectors.shape[0] + 1:
             self.relevanceVectors = self.relevanceVectors[useful[1:]]
+            self.relevanceTargets = self.relevanceTargets[useful[1:]]
             self.phi = self.phi[:, useful]
 
         elif self.alpha.shape[0] == self.relevanceVectors.shape[0]:
             self.relevanceVectors = self.relevanceVectors[useful]
+            self.relevanceTargets = self.relevanceTargets[useful]
             self.phi = self.phi[:, useful]
 
         else:
@@ -223,8 +229,14 @@ class RVR(RVM):
 
         kernel, args = self._get_kernel_function()
 
+        if len(self.X.shape) == 1:
+            self.X = self.X.reshape((self.N, 1))
+
         phi = np.array([[kernel(self.X[i - 1, :], xs, args) if i != 0 else 1 for i in
                           self.keptBasisFuncs] for xs in unseen_x])
+
+        if self.X.shape[1] == 1:
+            self.X = self.X.reshape(-1)
 
         variances = 1.0/self.beta + np.diag(phi.dot(self.covPosterior.dot(phi.T)))
 
@@ -284,10 +296,13 @@ class RVC(RVM):
             weights_old = np.copy(self.muPosterior)
             self.muPosterior -= self.learningRate * np.linalg.solve(
                 second_derivative, first_derivative)
-            #print(np.linalg.norm(self.muPosterior - weights_old))
+            if self.verbosity > 1:
+                print(np.linalg.norm(self.muPosterior - weights_old))
 
             iters += 1
-        print('Iterations used: ', iters)
+
+        if self.verbosity > 0:
+            print('Iterations used: ', iters)
         self.covPosterior = np.linalg.inv(-second_derivative)
 
     def _likelihood(self):
@@ -323,19 +338,8 @@ class RVC(RVM):
             alphaOld = np.array(self.alpha)
 
             self.irls()
-            # optRes = minimize(self._posterior, np.random.randn(self.muPosterior.shape[0]), jac=self._posteriorGradient)
-            # self.muPosterior = optRes.x
-            # recent_likelihood, sigmoid = self._likelihood()
-            # recent_likelihood_matrix = np.diag(recent_likelihood)
-            # second_derivative = -(np.dot(
-            #     self.phi.transpose().dot(recent_likelihood_matrix),
-            #     self.phi) + np.diag(self.alpha))
-            #
-            # self.covPosterior = np.linalg.inv(-second_derivative)
-
             self._reestimateAlphaBeta()
             alphaOld = self._prune(alphaOld)
-            # print(np.linalg.norm(self.alpha - alphaOld))
             iters += 1
 
     def predict(self, unseen_x):

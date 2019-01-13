@@ -25,7 +25,6 @@ np.random.seed(0)
 
 def initData(N, dataset): #*args
     """Initialize the data set training and testing examples"""
-    # X, T = dataset(N, *args)
     X, T = dataset(N)
     X_train, X_test, T_train, T_test = train_test_split(
             X, T, test_size=0.2, random_state=42)
@@ -33,11 +32,9 @@ def initData(N, dataset): #*args
 
 
 def main():
-    N = 1600 # number of data points
-    noiseVariance = 0.01**2
+    N = None
     dataFunction = airfoil
 
-    # X_train, X_test, T_train, T_test = initData(N, dataFunction, noiseVariance)
     X_train, X_test, T_train, T_test = initData(N, dataFunction)
     clf = RVR(X_train, T_train, 'RBFKernel')
     clf.fit()
@@ -46,7 +43,7 @@ def main():
     print(len(clf.relevanceVectors))
 
     # This is using training data -- should be changed of course
-    T_pred = clf.predict(X_test)
+    T_pred, _ = clf.predict(X_test)
     relError = np.mean([abs(true - pred) / true for true, pred in zip(T_test, T_pred)])
     absError = np.mean([abs(true - pred) for true, pred in zip(T_test, T_pred)])
     stdRelError = np.std([abs(true - pred) / true for true, pred in zip(T_test, T_pred)])
@@ -62,7 +59,7 @@ def main():
         plt.scatter(X_test[:,i], T_pred, s=20, color='r', label='Predictions')
         # Plot relevance vectors
         plt.scatter(clf.relevanceVectors[:,i],
-                clf.T,
+                clf.relevanceTargets,
                 label="Relevance vectors",
                 s=50,
                 facecolors="none",

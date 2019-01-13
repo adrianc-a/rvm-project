@@ -106,9 +106,9 @@ def run_regression_dataset(ds, args):
 
     svm_results['vec'] = [mdl.support_vectors_.shape[0] for mdl in
                           svm_results['estimator']]
-    rvm_results['vec'] = [mdl.model.relevanceVectors.shape[0] for mdl in
+    rvm_results['vec'] = [mdl.model.keptBasisFuncs.shape[0] for mdl in
                           rvm_results['estimator']]
-    rvm_star_results['vec'] = [mdl.model.relevanceVectors.shape[0] for mdl in
+    rvm_star_results['vec'] = [mdl.model.keptBasisFuncs.shape[0] for mdl in
                                rvm_star_results['estimator']]
 
     return rvm_results, rvm_star_results, svm_results

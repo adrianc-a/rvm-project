@@ -35,7 +35,7 @@ def main():
         rvm_star_model, 0, 40, train_data=(X_train, T_train), true_func=fx
     )
 
-    print('rel. vecs rvm:', rvm_model.keptBasisFuncs.shape)
+    print('rel. vecs rvm:', rvm_model.keptBasisFuncs.shape[0])
     print('rel. vecs rvm*:', rvm_star_model.keptBasisFuncs.shape)
 
     # Plot predictions

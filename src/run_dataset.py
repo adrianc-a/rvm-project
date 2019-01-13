@@ -39,6 +39,7 @@ def parse_args():
     parser.add_argument('-f', '--folds', type=int, default=5)
     parser.add_argument('-v', '--verbosity', type=int, default=0)
     parser.add_argument('-p', '--pretty-print', action='store_true')
+    parser.add_argument('-l', '--latex-print', action='store_true')
 
     return parser.parse_args(argv[1:])
 
@@ -177,9 +178,15 @@ def pprint(name, res):
     print('\t Avg no. vec:', np.mean(res['vec']))
     print('\tAvg fit time:', np.mean(res['fit_time']))
 
+def lprint(name, res):
+    # make a latex table...
+    pass
+
 def main(args):
     if args.pretty_print:
         pfunc = pprint
+    elif args.latex_print:
+        pfunc = lprint
     else:
         pfunc = print
 

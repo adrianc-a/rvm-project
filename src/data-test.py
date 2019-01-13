@@ -5,7 +5,7 @@
 __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
               and Leo Zeitler"
 
-from data import friedman_2, friedman_3, boston_housing, airfoil, slump, banana
+from data import friedman_2, friedman_3, boston_housing, airfoil, slump, banana, titanic, waveform, german, image, breast_cancer
 import numpy as np
 # Set a random seed
 np.random.seed(0)
@@ -44,6 +44,32 @@ def main():
     if len(X) != len(T):
         raise Exception("Lengths of X and T in Banana dataset do not match")
 
+    X, T = titanic(None)
+
+    if len(X) != len(T):
+        raise Exception("Lengths of X and T in Titanic dataset do not match")
+
+    X, T = waveform(None)
+
+    if len(X) != len(T):
+        raise Exception("Lengths of X and T in Waveform dataset do not match")
+
+    X, T = german(None)
+
+    if len(X) != len(T):
+        raise Exception("Lengths of X and T in German dataset do not match")
+
+    X, T = image(None)
+
+    if len(X) != len(T):
+        raise Exception("Lengths of X and T in Image dataset do not match")
+
+    X, T = breast_cancer(None)
+
+    if len(X) != len(T):
+        raise Exception("Lengths of X and T in breast cancer dataset do not match")
+
 
 if __name__ == '__main__':
     main()
+

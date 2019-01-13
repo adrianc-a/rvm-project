@@ -68,14 +68,20 @@ def friedman_3(n, noise):
     return make_friedman3(n_samples=n, noise=noise)
 
 
-def boston_housing(n):
+def boston_housing(n=None):
     (X, T) = load_boston(return_X_y=True)
-    return X[:n], T[:n]
+    if not n:
+        return X, T
+    else:
+        return X[:n], T[:n]
 
 
-def breast_cancer(n):
+def breast_cancer(n=None):
     (X, T) = load_breast_cancer(return_X_y=True)
-    return X[:n], T[:n]
+    if not n:
+        return X, T
+    else:
+        return X[:n], T[:n]
 
 
 def airfoil(n=None, path=None):
@@ -142,6 +148,138 @@ def banana(n=None, fileNumber=1, path=None):
             line_count += 1
 
     with open(path + "/data/banana/banana_train_labels_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            T.append(np.asarray(row[:], dtype=np.float64))
+            if T[-1][0] < 0:
+                T[-1][0] = 0
+            line_count += 1
+
+    return X, np.asarray(T).reshape(-1)
+
+
+def titanic(n=None, fileNumber=1, path=None):
+    if not path:
+        path = os.getcwd()
+
+    X = []
+    T = []
+    with open(path + "/data/titanic/titanic_train_data_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            X.append(np.asarray(row[:], dtype=np.float64))
+            line_count += 1
+
+    with open(path + "/data/titanic/titanic_train_labels_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            T.append(np.asarray(row[:], dtype=np.float64))
+            if T[-1][0] < 0:
+                T[-1][0] = 0
+            line_count += 1
+
+    return X, np.asarray(T).reshape(-1)
+
+
+def waveform(n=None, fileNumber=1, path=None):
+    if not path:
+        path = os.getcwd()
+
+    X = []
+    T = []
+    with open(path + "/data/waveform/waveform_train_data_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            X.append(np.asarray(row[:], dtype=np.float64))
+            line_count += 1
+
+    with open(path + "/data/waveform/waveform_train_labels_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            T.append(np.asarray(row[:], dtype=np.float64))
+            if T[-1][0] < 0:
+                T[-1][0] = 0
+            line_count += 1
+
+    return X, np.asarray(T).reshape(-1)
+
+
+def german(n=None, fileNumber=1, path=None):
+    if not path:
+        path = os.getcwd()
+
+    X = []
+    T = []
+    with open(path + "/data/german/german_train_data_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            X.append(np.asarray(row[:], dtype=np.float64))
+            line_count += 1
+
+    with open(path + "/data/german/german_train_labels_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            T.append(np.asarray(row[:], dtype=np.float64))
+            if T[-1][0] < 0:
+                T[-1][0] = 0
+            line_count += 1
+
+    return X, np.asarray(T).reshape(-1)
+
+
+def image(n=None, fileNumber=1, path=None):
+    if not path:
+        path = os.getcwd()
+
+    X = []
+    T = []
+    with open(path + "/data/image/image_train_data_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            X.append(np.asarray(row[:], dtype=np.float64))
+            line_count += 1
+
+    with open(path + "/data/image/image_train_labels_" + str(fileNumber) + ".asc") as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
 
         line_count = 0

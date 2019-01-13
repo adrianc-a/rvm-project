@@ -1,21 +1,23 @@
 from sys import argv
 from argparse import ArgumentParser
 from sklearn import svm
+from sklearn.model_selection import cross_validate as cval
 from numpy import linalg as la
 
-import time
 import numpy as np
+
+from kernels import get_kernel
 
 import data
 import rvm
 
 REGRESSION_DATASETS = {
-    'cos': lambda: data.cos_test_train(30, 10, 0.1),
+    'cos': lambda: data.cos(30, 0.1),
     'airfoil': lambda: data.airfoil_test_train(1050, 453)
 }
 
 CLASSIFICATION_DATASETS = {
-    'linear': lambda: data.linearClassification(100, 20, np.array([1, 1]))
+    'linear': lambda: data.createSimpleClassData(100, np.array([1, 1]))
 }
 
 
@@ -34,85 +36,108 @@ def parse_args():
     parser.add_argument('-a', '--alpha-thresh', type=float, default=10e8)
     parser.add_argument('-c', '--conv-thresh', type=float, default=10e-2)
     parser.add_argument('-k', '--kernel', type=str, default='RBFKernel')
+    parser.add_argument('-f', '--folds', type=int, default=5)
 
     return parser.parse_args(argv[1:])
 
 
-def time_fit(func):
-    begin = time.time()
-    func()
-    end = time.time()
-    return end - begin
+class RVRFitWrapper:
+    def __init__(self, model_factory):
+        self.model_factory = model_factory
+        self.model = None
+
+    def fit(self, x, y):
+        self.model = self.model_factory(x, y)
+        self.model.fit()
+
+    def predict(self, x):
+        return self.model.predict(x)
+
+    def score(self, x, y):
+        return (la.norm(self.model.predict(x) - y) ** 2) / x.shape[0]
+
+    def get_params(self, deep=False):
+        return {'model_factory': self.model_factory}
+
+
+class RVCFitWrapper(RVRFitWrapper):
+    def predict(self, x):
+        return np.where(self.model.predict(x) >= .5, 1, 0)
+
+    def score(self, x, y):
+        predictions = self.predict(x)
+        return (predictions == y).sum() / predictions.shape[0]
+
+
+def create_kernel_callable(kname):
+    kernel, argv = get_kernel(kname)
+
+    def _kernel(x, y):
+        return kernel(x, y, argv)
+
+    return _kernel
 
 
 def run_regression_dataset(ds, args):
-    train, test = REGRESSION_DATASETS[ds]()
+    x, y = REGRESSION_DATASETS[ds]()
 
     # creating the models
-    rvm_model = rvm.RVR(
-        train[0], train[1], args.kernel, alphaThresh=args.alpha_thresh,
+    rvm_model = lambda x, y: rvm.RVR(
+        x, y, args.kernel, alphaThresh=args.alpha_thresh,
         convergenceThresh=args.conv_thresh
     )
-    rvm_star_model = rvm.RVMRS(
-        train[0], train[1], args.kernel, alphaThresh=args.alpha_thresh,
+    rvm_star_model = lambda x, y: rvm.RVMRS(
+        x, y, args.kernel, alphaThresh=args.alpha_thresh,
         convergenceThresh=args.conv_thresh
     )
-    svm_model = svm.SVR(kernel='rbf')
 
-    # timing the fitting...
-    times = [
-        time_fit(rvm_model.fit),
-        time_fit(rvm_star_model.fit),
-        time_fit(lambda: svm_model.fit(train[0], train[1]))
-    ]
+    svm_model = svm.SVR(kernel='rbf', gamma=2)
 
-    accuracies = [
-        la.norm(rvm_model.predict(test[0]) - test[1]),
-        la.norm(rvm_star_model.predict(test[0]) - test[1]),
-        la.norm(svm_model.predict(test[0]) - test[1]),
-    ]
+    rvm_wrapper = RVRFitWrapper(rvm_model)
+    rvm_star_wrapper = RVRFitWrapper(rvm_star_model)
 
-    num_vectors = [
-        rvm_model.relevanceVectors.shape[0],
-        rvm_star_model.relevanceVectors.shape[0],
-        svm_model.support_vectors_.shape[0],
-    ]
+    svm_results = cval(svm_model, x, y, cv=args.folds, return_train_score=False,
+                       scoring='neg_mean_squared_error', return_estimator=True)
 
-    return times, accuracies, num_vectors
+    rvm_results = cval(rvm_wrapper, x, y, cv=args.folds,
+                       return_train_score=False, return_estimator=True)
+    rvm_star_results = cval(rvm_star_wrapper, x, y, cv=args.folds,
+                            return_train_score=False, return_estimator=True)
 
+    svm_results['vec'] = [mdl.support_vectors_.shape[0] for mdl in
+                          svm_results['estimator']]
+    rvm_results['vec'] = [mdl.model.relevanceVectors.shape[0] for mdl in
+                          rvm_results['estimator']]
+    rvm_star_results['vec'] = [mdl.model.relevanceVectors.shape[0] for mdl in
+                               rvm_star_results['estimator']]
 
-def classification_accuracy(predictions, true_vals):
-    return (predictions == true_vals).sum() / predictions.shape[0]
+    return rvm_results, rvm_star_results, svm_results
 
 
 def run_classification_dataset(ds, args):
-    train, test = CLASSIFICATION_DATASETS[ds]()
+    x, y = CLASSIFICATION_DATASETS[ds]()
 
-    rvm_model = rvm.RVC(
-        train[0], train[1], args.kernel, alphaThresh=args.alpha_thresh,
+    rvm_model = lambda x, y: rvm.RVC(
+        x, y, args.kernel, alphaThresh=args.alpha_thresh,
         convergenceThresh=args.conv_thresh
     )
-    svm_model = svm.SVC(kernel='rbf')
-    
-    train_times = [
-        time_fit(rvm_model.fit),
-        time_fit(lambda: svm_model.fit(train[0], train[1]))
-    ]
 
-    accuracies = [
-        classification_accuracy(
-            np.where(rvm_model.predict(test[0]) >= .5, 1, 0)
-            , test[1]
-        ),
-        classification_accuracy(svm_model.predict(test[0]), test[1])
-    ]
-    
-    num_vectors = [
-        rvm_model.relevanceVectors.shape[0],
-        svm_model.support_vectors_.shape[0]
-    ]
-    
-    return train_times, accuracies, num_vectors
+    svm_model = svm.SVC(kernel='rbf', gamma=2)
+
+    rvm_wrapper = RVCFitWrapper(rvm_model)
+
+    rvm_results = cval(rvm_wrapper, x, y, cv=args.folds,
+                       return_train_score=False, return_estimator=True)
+    svm_results = cval(svm_model, x, y, cv=args.folds, return_train_score=False,
+                       return_estimator=True, scoring='accuracy')
+
+    svm_results['vec'] = [sum(mdl.n_support_) for mdl in
+                          svm_results['estimator']]
+    rvm_results['vec'] = [mdl.model.relevanceVectors.shape[0] for mdl in
+                          rvm_results['estimator']]
+
+    return rvm_results, svm_results
+
 
 def main(args):
     for ds in args.dataset:

@@ -72,3 +72,23 @@ def cosineKernel(x, y, *args):
 
 def logKernel(x, y, *args):
     return np.log(1 + np.linalg.norm(x - y) ** 2)
+
+
+def get_kernel(kernelName, sigma=2, p=3):
+    if kernelName == 'linearKernel':
+        return linearKernel, None
+
+    if kernelName == 'linearSplineKernel':
+        return linearSplineKernel, None
+
+    elif kernelName == 'RBFKernel':
+        return RBFKernel, sigma
+
+    elif kernelName == 'polynomialKernel':
+        return polynomialKernel, p
+
+    elif kernelName == 'cosineKernel':
+        return cosineKernel, None
+
+    elif kernelName == 'logKernel':
+        return logKernel, None

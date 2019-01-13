@@ -5,8 +5,9 @@
 __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
               and Leo Zeitler"
 
-from kernels import linearKernel, linearSplineKernel, polynomialKernel, \
-    RBFKernel, cosineKernel, logKernel
+# from kernels import linearKernel, linearSplineKernel, polynomialKernel, \
+#     RBFKernel, cosineKernel, logKernel
+from kernels import get_kernel
 
 from scipy.optimize import minimize
 from scipy.special import expit
@@ -79,23 +80,7 @@ class RVM:
         Getter function for the kernel method set in the constructor together with the params
         :return: kernel function (function), additional parameters (args)
         """
-        if self.kernelName == 'linearKernel':
-            return linearKernel, None
-
-        if self.kernelName == 'linearSplineKernel':
-            return linearSplineKernel, None
-
-        elif self.kernelName == 'RBFKernel':
-            return RBFKernel, self.sigma
-
-        elif self.kernelName == 'polynomialKernel':
-            return polynomialKernel, self.p
-
-        elif self.kernelName == 'cosineKernel':
-            return cosineKernel, None
-
-        elif self.kernelName == 'logKernel':
-            return logKernel, None
+        return get_kernel(self.kernelName, sigma=self.sigma, p=self.p)
 
     def rvm_output(self, unseen_x):
         """

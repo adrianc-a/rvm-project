@@ -35,8 +35,8 @@ def linearSplineKernel(x, y, *args):
     return 1 \
            + x * y \
            + x * y * min(x, y) \
-           - (x + y) / 2 * min(x, y)**2 \
-           + min(x, y)**3 / 3
+           - (x + y) / 2 * min(x, y) ** 2 \
+           + min(x, y) ** 3 / 3
 
 
 def polynomialKernel(x, y, *args):
@@ -48,7 +48,7 @@ def polynomialKernel(x, y, *args):
     *args (int): the degree of the polynomial
 
     """
-    return math.pow(np.dot(x,y) + 1, args[0])
+    return math.pow(np.dot(x, y) + 1, args[0])
 
 
 def RBFKernel(x, y, *args):
@@ -68,3 +68,7 @@ def RBFKernel(x, y, *args):
 
 def cosineKernel(x, y, *args):
     return (np.pi / 4.0) * np.cos(np.pi * 0.5 * np.linalg.norm(x - y))
+
+
+def logKernel(x, y, *args):
+    return np.log(1 + np.linalg.norm(x - y) ** 2)

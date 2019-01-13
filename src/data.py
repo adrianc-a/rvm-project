@@ -2,7 +2,7 @@ import numpy as np
 
 
 def createSimpleClassData(n, w, scale=10):
-    X = np.random.rand(n, 2) * scale - scale/2.
+    X = np.random.rand(n, 2) * scale - scale / 2.
     T = X.dot(w) > 0
     return X, T.astype(int)
 
@@ -31,6 +31,20 @@ def sinc(n, sigma):
     return X, T
 
 
+def cos(n, sigma):
+    X = np.random.uniform(0, 10, size=(n, 1))
+    T = np.cos(X) + np.random.normal(0, sigma, size=(n, 1))
+
+    return X, T.reshape((n,))
+
+
+def linear(n, sigma):
+    x = np.random.uniform(0, 10, size=(n,1))
+    t = 1.2 * x**2 + x+2 + np.random.normal(0, sigma, size=(n, 1))
+
+    return x, t.reshape((n,))
+
+
 def airfoil(n1):
     text_file = open("airfoil.dat", "r")
     lines = text_file.readlines()[:n1]
@@ -45,4 +59,3 @@ def airfoil(n1):
         T[i] = float_list[-1]
     text_file.close()
     return X, T
-

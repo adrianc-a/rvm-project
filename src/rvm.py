@@ -5,8 +5,9 @@
 __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
               and Leo Zeitler"
 
-from kernels import linearKernel, linearSplineKernel, polynomialKernel, \
-    RBFKernel, cosineKernel, logKernel
+# from kernels import linearKernel, linearSplineKernel, polynomialKernel, \
+#     RBFKernel, cosineKernel, logKernel
+from kernels import get_kernel
 
 from scipy.optimize import minimize
 from scipy.special import expit
@@ -33,7 +34,7 @@ class RVM:
             convergenceThresh=10 ** -7,
             alphaThresh=10 ** 8,
             learningRate=0.2,
-            maxIter=3000,
+            maxIter=100,
             verbosity=0
     ):
         """
@@ -83,23 +84,7 @@ class RVM:
         Getter function for the kernel method set in the constructor together with the params
         :return: kernel function (function), additional parameters (args)
         """
-        if self.kernelName == 'linearKernel':
-            return linearKernel, None
-
-        if self.kernelName == 'linearSplineKernel':
-            return linearSplineKernel, None
-
-        elif self.kernelName == 'RBFKernel':
-            return RBFKernel, self.sigma
-
-        elif self.kernelName == 'polynomialKernel':
-            return polynomialKernel, self.p
-
-        elif self.kernelName == 'cosineKernel':
-            return cosineKernel, None
-
-        elif self.kernelName == 'logKernel':
-            return logKernel, None
+        return get_kernel(self.kernelName, sigma=self.sigma, p=self.p)
 
     def rvm_output(self, unseen_x):
         """
@@ -250,8 +235,9 @@ class RVR(RVM):
         phi = np.array([[kernel(self.X[i - 1, :], xs, args) if i != 0 else 1 for i in
                           self.keptBasisFuncs] for xs in unseen_x])
 
-        if self.X.shape[1] == 1:
-            self.X = self.X.reshape(-1)
+        # lmk if there is a better way to fix this...
+        # if self.X.shape[1] == 1:
+        #     self.X = self.X.reshape(-1)
 
         variances = 1.0/self.beta + np.diag(phi.dot(self.covPosterior.dot(phi.T)))
 
@@ -298,7 +284,7 @@ class RVC(RVM):
 
         second_derivative = None
         iters = 0
-        while iters < 30 and np.linalg.norm(
+        while iters < self.maxIter and np.linalg.norm(
                 self.muPosterior - weights_old) >= self.convergenceThresh:
             recent_likelihood, sigmoid = self._likelihood()
             recent_likelihood_matrix = np.diag(recent_likelihood)

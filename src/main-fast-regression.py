@@ -4,7 +4,7 @@
 __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
               and Leo Zeitler"
 
-from data import sinc, createSimpleClassData, sinc_np, sin
+from data import sinc, createSimpleClassData, sinc_np, sin, cos
 from rvm import RVR, RVC
 
 from sklearn.model_selection import train_test_split
@@ -29,10 +29,10 @@ def main():
     N = 100 # number of data points
     noiseSpread = 0.001
 
-    X_train, X_test, T_train, T_test = initData(N, sinc, noiseSpread)
+    X_train, X_test, T_train, T_test = initData(N, cos, noiseSpread)
 
     # very sensible to initial value of beta (as described in the paper)
-    clf = RVR(X_train, T_train, 'linearSplineKernel', beta=0.001**-2, useFast=True, convergenceThresh=10**-10, maxIter=80)
+    clf = RVR(X_train, T_train, 'RBFKernel', beta=0.001**-2, useFast=True, convergenceThresh=10**-10, maxIter=500)
     clf.fit()
 
     print("The relevance vectors:")

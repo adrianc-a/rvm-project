@@ -227,9 +227,11 @@ class RVM:
                 self.relevanceTargets = self.T[mask]
 
         else:
+            indices = np.indices((mask.shape[0],)).reshape(-1)[mask]
+            deleteMuIndex = indices[indices == index]
+            self.muPosterior = np.delete(self.muPosterior, deleteMuIndex)
+
             mask[index] = False
-            mu = self.muPosterior[mask[mask]]
-            self.muPosterior = mu
 
             self.alpha = self.alphaCompare[mask]
             self.phi = (self.basisVectors.transpose()[mask]).transpose()

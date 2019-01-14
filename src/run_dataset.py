@@ -54,6 +54,7 @@ def parse_args():
     parser.add_argument('-l', '--latex-print', action='store_true')
     parser.add_argument('-e', '--csv-export', type=str, default='')
     parser.add_argument('-n', '--no-print', action='store_true')
+    parser.add_argument('-i', '--max-iters', type=int, default=100)
 
     return parser.parse_args(argv[1:])
 
@@ -103,19 +104,28 @@ def run_regression_dataset(ds, args):
     rvm_model = lambda a, b: rvm.RVR(
         a, b, args.kernel, alphaThresh=args.alpha_thresh,
         convergenceThresh=args.conv_thresh,
-        verbosity=args.verbosity
+        verbosity=args.verbosity,
+        maxIter=args.max_iters
     )
 
     rvm_star_model = lambda a, b: rvm.RVMRS(
         a, b, args.kernel, alphaThresh=args.alpha_thresh,
         convergenceThresh=args.conv_thresh,
-        verbosity=args.verbosity
+        verbosity=args.verbosity,
+        maxIter=args.max_iters
+    )
+
+    rvm_fast_model = lambda a, b: rvm.RVR(
+        a, b, args.kernel, verbosity=args.verbosity,
+        maxIter=args.max_iters,
+        useFast=True
     )
 
     svm_model = svm.SVR(kernel='rbf', gamma=2)
 
     rvm_wrapper = RVRFitWrapper(rvm_model)
     rvm_star_wrapper = RVRFitWrapper(rvm_star_model)
+    rvm_fast_wrapper = RVRFitWrapper(rvm_fast_model)
 
     # results
     svm_results = cval(
@@ -123,13 +133,20 @@ def run_regression_dataset(ds, args):
         scoring='neg_mean_squared_error', return_estimator=True
     )
 
+    np.random.seed(0)
     rvm_results = cval(
         rvm_wrapper, x, y, cv=args.folds,
         return_train_score=False, return_estimator=True
     )
 
+    np.random.seed(0)
     rvm_star_results = cval(
         rvm_star_wrapper, x, y, cv=args.folds,
+        return_train_score=False, return_estimator=True
+    )
+
+    rvm_fast_results = cval(
+        rvm_fast_wrapper, x, y, cv=args.folds,
         return_train_score=False, return_estimator=True
     )
 
@@ -149,7 +166,12 @@ def run_regression_dataset(ds, args):
         rvm_star_results['estimator']
     ]
 
-    return rvm_results, rvm_star_results, svm_results
+    rvm_fast_results['vec'] = [
+        mdl.model.keptBasisFuncs.shape[0] for mdl in
+        rvm_fast_results['estimator']
+    ]
+
+    return rvm_results, rvm_star_results, rvm_fast_results, svm_results
 
 
 def run_classification_dataset(ds, args):
@@ -158,16 +180,30 @@ def run_classification_dataset(ds, args):
     rvm_model = lambda a, b: rvm.RVC(
         a, b, args.kernel, alphaThresh=args.alpha_thresh,
         convergenceThresh=args.conv_thresh,
-        verbosity=args.verbosity
+        verbosity=args.verbosity,
+        maxIter=args.max_iters
+    )
+
+    rvm_fast_model = lambda a, b: rvm.RVC(
+        a, b, args.kernel,
+        verbosity=args.verbosity,
+        maxIter=args.max_iters,
+        useFast=True
     )
 
     svm_model = svm.SVC(kernel='rbf', gamma=2)
 
     rvm_wrapper = RVCFitWrapper(rvm_model)
+    rvm__fast_wrapper = RVCFitWrapper(rvm_fast_model)
 
     # results
     rvm_results = cval(
         rvm_wrapper, x, y, cv=args.folds,
+        return_train_score=False, return_estimator=True
+    )
+
+    rvm_fast_results = cval(
+        rvm__fast_wrapper, x, y, cv=args.folds,
         return_train_score=False, return_estimator=True
     )
 
@@ -184,7 +220,10 @@ def run_classification_dataset(ds, args):
         mdl.model.relevanceVectors.shape[0] for mdl in rvm_results['estimator']
     ]
 
-    return rvm_results, svm_results
+    rvm_fast_results['vec'] = [
+        mdl.model.relevanceVectors.shape[0] for mdl in rvm_fast_results['estimator']
+    ]
+    return rvm_results, rvm_fast_results, svm_results
 
 
 def pprint(name, res):
@@ -200,7 +239,7 @@ def lprint(name, res):
 
 
 def write_csv(name, res, is_regression=True):
-    models = ['rvm', 'rvm*', 'svm'] if is_regression else ['rvm', 'svm']
+    models = ['rvm', 'rvm*', 'rvmf', 'svm'] if is_regression else [' rvm', 'rvmf' ' svm']
 
     ext = 'regression' if is_regression else 'classification'
     with open(name + '_' + ext + '.csv', 'w', newline='') as csvfile:
@@ -244,20 +283,22 @@ def main(args):
             raise RuntimeError(
                 'Dataset ' + ds + 'not in list of known datasets')
         elif ds in REGRESSION_DATASETS:
-            rvm_res, rvm_s_res, svm_res = run_regression_dataset(ds, args)
+            rvm_res, rvm_s_res, rvm_f_res, svm_res = run_regression_dataset(ds, args)
 
             pfunc(' rvm', rvm_res)
             pfunc('rvm*', rvm_s_res)
+            pfunc('rvmf', rvm_f_res)
             pfunc(' svm', svm_res)
             if args.csv_export != '':
-                regression_results.append((ds, rvm_res, rvm_s_res, svm_res))
+                regression_results.append((ds, rvm_res, rvm_s_res, rvm_f_res, svm_res))
 
         elif ds in CLASSIFICATION_DATASETS:
-            rvm_res, svm_res = run_classification_dataset(ds, args)
+            rvm_res, rvm_f_res, svm_res = run_classification_dataset(ds, args)
             pfunc('rvm', rvm_res)
+            pfunc('rvmf', rvm_f_res)
             pfunc('svm', svm_res)
             if args.csv_export != '':
-                classification_results.append((ds, rvm_res, svm_res))
+                classification_results.append((ds, rvm_res, rvm_f_res, svm_res))
     if args.csv_export != '':
         write_csv(args.csv_export, regression_results, is_regression=True)
         write_csv(args.csv_export, classification_results, is_regression=False)

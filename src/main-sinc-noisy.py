@@ -39,26 +39,25 @@ def main():
     print("The relevance vectors:")
     print(clf.relevanceVectors)
 
-    T_pred = clf.predict(X_test)
+    T_pred, _ = clf.predict(X_test)
 
     # Plot training data
     X = np.linspace(-10, 10, 250)
     plt.plot(X, np.sinc(X), label='orig func')
     plt.scatter(X_train, T_train, label='Training noisy samples')
-    #plt.scatter(X_test, T_test, label='Testing noisy samples')
 
     # Plot predictions
-    #plt.scatter(X_test, T_pred, s=20, color='r', label='Predictions')
-    plt.plot(X, clf.predict(X), label='Prediction {\mu}')
+    predictedMu, _ = clf.predict(X)
+    plt.plot(X, predictedMu, label='Prediction {\mu}')
 
     # Plot relevance vectors
-    # plt.scatter(clf.relevanceVectors,
-    #             clf.T,
-    #             label="Relevance vectors",
-    #             s=50,
-    #             facecolors="none",
-    #             color="k",
-    #             zorder=1)
+    plt.scatter(clf.relevanceVectors,
+                clf.relevanceTargets,
+                label="Relevance vectors",
+                s=50,
+                facecolors="none",
+                color="k",
+                zorder=1)
 
     plt.ylim(-0.3, 1.1)
     plt.xlabel("x")

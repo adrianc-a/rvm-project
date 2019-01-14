@@ -35,8 +35,8 @@ def linearSplineKernel(x, y, *args):
     return 1 \
            + x * y \
            + x * y * min(x, y) \
-           - (x + y) / 2 * min(x, y)**2 \
-           + min(x, y)**3 / 3
+           - (x + y) / 2 * min(x, y) ** 2 \
+           + min(x, y) ** 3 / 3
 
 
 def polynomialKernel(x, y, *args):
@@ -48,7 +48,7 @@ def polynomialKernel(x, y, *args):
     *args (int): the degree of the polynomial
 
     """
-    return math.pow(np.dot(x,y) + 1, args[0])
+    return math.pow(np.dot(x, y) + 1, args[0])
 
 
 def RBFKernel(x, y, *args):
@@ -63,8 +63,32 @@ def RBFKernel(x, y, *args):
     num = distance.euclidean(x, y)
     denom = 2 * args[0] ** 2
 
-    return math.exp(- num / denom)
+    return np.exp(-num / denom)
 
 
 def cosineKernel(x, y, *args):
     return (np.pi / 4.0) * np.cos(np.pi * 0.5 * np.linalg.norm(x - y))
+
+
+def logKernel(x, y, *args):
+    return np.log(1 + np.linalg.norm(x - y) ** 2)
+
+
+def get_kernel(kernelName, sigma=2, p=3):
+    if kernelName == 'linearKernel':
+        return linearKernel, None
+
+    if kernelName == 'linearSplineKernel':
+        return linearSplineKernel, None
+
+    elif kernelName == 'RBFKernel':
+        return RBFKernel, sigma
+
+    elif kernelName == 'polynomialKernel':
+        return polynomialKernel, p
+
+    elif kernelName == 'cosineKernel':
+        return cosineKernel, None
+
+    elif kernelName == 'logKernel':
+        return logKernel, None

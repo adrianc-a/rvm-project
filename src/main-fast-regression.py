@@ -42,7 +42,7 @@ def main():
     print("beta:", clf.beta)
 
     # This is using training data -- should be changed of course
-    T_pred = clf.predict(X_test)
+    T_pred, _ = clf.predict(X_test)
 
     # Plot training data
     plt.scatter(X_train, T_train, s=20, label='Training data')
@@ -52,7 +52,7 @@ def main():
 
     # Plot relevance vectors
     plt.scatter(clf.relevanceVectors,
-                clf.predict(clf.relevanceVectors),
+                clf.relevanceTargets,
                 label="Relevance vectors",
                 s=50,
                 facecolors="none",

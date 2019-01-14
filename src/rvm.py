@@ -120,8 +120,10 @@ class RVM:
         """
         self.covPosterior = np.linalg.inv(
             np.diag(self.alpha) + self.beta * np.dot(self.phi.T, self.phi)
-        )self.muPosterior = self.beta * np.dot(self.covPosterior, self.phi.T).dot(self.T)
-def _computeInitAlpha(self, index, basisVector):
+        )
+        self.muPosterior = self.beta * np.dot(self.covPosterior, self.phi.T).dot(self.T)
+
+    def _computeInitAlpha(self, index, basisVector):
         squaredNorm = np.linalg.norm(basisVector) ** 2
         denominator = (np.linalg.norm(basisVector.transpose().dot(self.T)) ** 2 / squaredNorm) - self.beta**-1
 
@@ -216,10 +218,13 @@ def _computeInitAlpha(self, index, basisVector):
             self.alphaCompare[index] = newAlpha
             self.alpha = self.alphaCompare[mask]
             self.phi = (self.basisVectors.transpose()[mask]).transpose()
+            self.keptBasisFuncs = np.indices((self.basisVectors.transpose().shape[0],)).reshape(-1)[mask]
             if self.alphaCompare[0] != np.inf:
                 self.relevanceVectors = self.X[mask[1:]]
+                self.relevanceTargets = self.T[mask[1:]]
             else:
                 self.relevanceVectors = self.X[mask]
+                self.relevanceTargets = self.T[mask]
 
         else:
             mask[index] = False
@@ -228,10 +233,13 @@ def _computeInitAlpha(self, index, basisVector):
 
             self.alpha = self.alphaCompare[mask]
             self.phi = (self.basisVectors.transpose()[mask]).transpose()
+            self.keptBasisFuncs = np.indices((self.basisVectors.transpose().shape[0],)).reshape(-1)[mask]
             if self.alphaCompare[0] != np.inf:
                 self.relevanceVectors = self.X[mask[1:]]
+                self.relevanceTargets = self.T[mask[1:]]
             else:
                 self.relevanceVectors = self.X[mask]
+                self.relevanceTargets = self.T[mask]
 
 
     def fit(self):
@@ -286,24 +294,25 @@ class RVR(RVM):
         """
         Fit the training data
         """
-        if notself.useFast:
+        if not self.useFast:
+            for i in range(self.maxIter):
+                alphaOld = np.array(self.alpha)
 
-        for i in range(self.maxIter):
-            alphaOld = np.array(self.alpha)
+                self._reestimateAlphaBeta()
+                alphaOld = self._prune(alphaOld)
+                self._posterior()
+                if np.linalg.norm(self.alpha - alphaOld) <= self.convergenceThresh:
+                    break
 
-            self._reestimateAlphaBeta()
-            alphaOld = self._prune(alphaOld)
-            self._posterior()
-            if np.linalg.norm(self.alpha - alphaOld) <= self.convergenceThresh:
-                breakelse:
-            alphaOld = np.ones(self.N+1)
+        else:
+            # alphaOld = np.ones(self.N+1)
             counter = 0
 
             while counter < self.maxIter:
             # while (self.alphaCompare[self.alphaCompare != np.inf].shape[0] != alphaOld[alphaOld != np.inf].shape[0] or
             #                 np.linalg.norm(self.alphaCompare[self.alphaCompare != np.inf]
             #                 - alphaOld[alphaOld != np.inf]) > self.convergenceThresh):
-                alphaOld = np.copy(self.alphaCompare)
+            #     alphaOld = np.copy(self.alphaCompare)
 
 
                 # TODO needs to bring covPosterior into shape first. Does this destroy the calculation?
@@ -314,6 +323,9 @@ class RVR(RVM):
                 self._reestimateAlphaBetaFastAndPrune(counter % (self.N + 1), quality, sparsity)
 
                 counter += 1
+
+            # update covariance and mu after the last prune
+            self._posterior()
 
     def predict(self, unseen_x):
         """
@@ -406,7 +418,7 @@ class RVC(RVM):
         second_derivative = None
         iters = 0
         while iters < self.maxIter and np.linalg.norm(
-                self.muPosterior - weights_old) >= self.convergenceThresh:
+                        self.muPosterior - weights_old) >= self.convergenceThresh:
             recent_likelihood, sigmoid = self._likelihood()
             recent_likelihood_matrix = np.diag(recent_likelihood)
             second_derivative = -(np.dot(
@@ -460,13 +472,10 @@ class RVC(RVM):
                     and iters < 10:
                 alphaOld = np.array(self.alpha)
 
-            self.irls()
-
-
-            self._reestimateAlphaBeta()
-            alphaOld = self._prune(alphaOld)
-
-            iters += 1
+                self.irls()
+                self._reestimateAlphaBeta()
+                alphaOld = self._prune(alphaOld)
+                iters += 1
 
         else:
             alphaOld = np.ones(self.N + 1)

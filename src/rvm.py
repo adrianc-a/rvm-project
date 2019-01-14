@@ -35,8 +35,9 @@ class RVM:
             alphaThresh=10 ** 8,
             learningRate=0.2,
             maxIter=100,
-            verbosity=0
-    ):
+            verbosity=0,
+            useFast = False
+        ):
         """
         RVM parameters initialization
 
@@ -62,16 +63,26 @@ class RVM:
         self.T = T
         self.relevanceTargets = T
         self.N = np.shape(X)[0]
-        self.relevanceVectors = np.copy(X)
-        self.phi = self._initPhi(X)
 
+        self.useFast = useFast
         self.beta = beta
+
+        if not self.useFast:
+            self.alpha = alpha * np.ones(self.N + 1)
+            self.phi = self._initPhi(X)
+            self.relevanceVectors = np.copy(X)
+        else:
+            self.alphaCompare = np.full(self.N + 1, np.inf)
+            self.basisVectors = self._initPhi(X)
+            if not self.beta:
+                self.beta = 1. / np.var(self.T)
+            self.alpha = self._computeInitAlpha(0, self.basisVectors.transpose()[0])
+            self.relevanceVectors = np.asarray([])
+
         self.convergenceThresh = convergenceThresh
         self.alphaThresh = alphaThresh
         self.learningRate = learningRate
         self.maxIter = maxIter
-
-        self.alpha = alpha * np.ones(self.N + 1)
 
         self._setCovAndMu()
         self.keptBasisFuncs = np.arange(self.N + 1)
@@ -108,9 +119,16 @@ class RVM:
         Set the covariance and the mean according to the recent alpha and beta values
         """
         self.covPosterior = np.linalg.inv(
-            np.diag(self.alpha) + self.beta * np.dot(self.phi.T, self.phi))
-        self.muPosterior = self.beta * np.dot(self.covPosterior,
-                                              self.phi.T).dot(self.T)
+            np.diag(self.alpha) + self.beta * np.dot(self.phi.T, self.phi)
+        )
+        self.muPosterior = self.beta * np.dot(self.covPosterior, self.phi.T).dot(self.T)
+
+    def _computeInitAlpha(self, index, basisVector):
+        squaredNorm = np.linalg.norm(basisVector) ** 2
+        denominator = (np.linalg.norm(basisVector.transpose().dot(self.T)) ** 2 / squaredNorm) - self.beta**-1
+
+        self.alphaCompare[index] = squaredNorm / denominator
+        return np.asarray([self.alphaCompare[index]])
 
     def _initPhi(self, X):
         """
@@ -126,8 +144,7 @@ class RVM:
         """
         # in the begining these are the same
         # but when we are calculating the predictive posterior, they will not be
-        phi = np.ones((self.N, self.N + 1))
-
+        phi = np.ones((self.N ,self.N+1))
 
         kernel, args = self._get_kernel_function()
 
@@ -135,6 +152,9 @@ class RVM:
             phi_x_n = [kernel(x_n, x_i, args) for x_i in X]
             phi_x_n = np.insert(phi_x_n, 0, 1)
             phi[num] = phi_x_n
+
+        if self.useFast:
+            self.phi = np.ones((self.N, 1))
 
         return phi
 
@@ -172,9 +192,55 @@ class RVM:
         """
         gamma = 1 - self.alpha * np.diag(self.covPosterior)
         self.alpha = gamma / (self.muPosterior ** 2)
-
         self.beta = (self.N - np.sum(gamma)) / (np.linalg.norm(
             self.T - np.dot(self.phi, self.muPosterior)) ** 2)
+
+    def _reestimateAlphaBetaFastAndPrune(self, index, quality, sparsity):
+        # mask = np.indices(self.alphaCompare.shape)[0][self.alphaCompare != np.inf]
+        mask = self.alphaCompare != np.inf
+        if self.alphaCompare[index] == np.inf:
+            s = sparsity
+            q = quality
+        else:
+            s = (self.alphaCompare[index] * sparsity) / (self.alphaCompare[index] - sparsity)
+            q = (self.alphaCompare[index] * quality) / (self.alphaCompare[index] - sparsity)
+
+        theta = (q ** 2) - s
+
+        if theta > 0:
+            maskLength = mask[mask].shape[0]
+            mask[index] = True
+
+            if maskLength != mask[mask].shape[0]:
+                self.muPosterior = np.append(self.muPosterior, 1)
+
+            newAlpha = s ** 2 / ((q ** 2) - s)
+            self.alphaCompare[index] = newAlpha
+            self.alpha = self.alphaCompare[mask]
+            self.phi = (self.basisVectors.transpose()[mask]).transpose()
+            self.keptBasisFuncs = np.indices((self.basisVectors.transpose().shape[0],)).reshape(-1)[mask]
+            if self.alphaCompare[0] != np.inf:
+                self.relevanceVectors = self.X[mask[1:]]
+                self.relevanceTargets = self.T[mask[1:]]
+            else:
+                self.relevanceVectors = self.X[mask]
+                self.relevanceTargets = self.T[mask]
+
+        else:
+            mask[index] = False
+            mu = self.muPosterior[mask[mask]]
+            self.muPosterior = mu
+
+            self.alpha = self.alphaCompare[mask]
+            self.phi = (self.basisVectors.transpose()[mask]).transpose()
+            self.keptBasisFuncs = np.indices((self.basisVectors.transpose().shape[0],)).reshape(-1)[mask]
+            if self.alphaCompare[0] != np.inf:
+                self.relevanceVectors = self.X[mask[1:]]
+                self.relevanceTargets = self.T[mask[1:]]
+            else:
+                self.relevanceVectors = self.X[mask]
+                self.relevanceTargets = self.T[mask]
+
 
     def fit(self):
         """
@@ -185,6 +251,15 @@ class RVM:
     def predict(self, unseen_x):
         """
         Dummy for the predicting method
+        """
+        pass
+
+    def _computeSQ(self, basisVector):
+        """
+        Dummy for computing the S and the Q value for the fast implementation
+        :param basisVector: the basis vector used for the calculation and
+        which corresponds to the currently updated alpha
+        :return: the Q and S value
         """
         pass
 
@@ -200,20 +275,57 @@ class RVR(RVM):
         """
         self._setCovAndMu()
 
+    def _computeSQ(self, basisVector):
+        a = np.linalg.inv(np.diag(self.alpha))
+        cMatrix = np.linalg.inv(
+            self.beta**-1 * np.eye(basisVector.shape[0]) + self.phi.dot(np.dot(a, self.phi.transpose()))
+        )
+
+        sparsity = basisVector.transpose().dot(np.dot(cMatrix, basisVector))
+        quality = basisVector.transpose().dot(np.dot(cMatrix, self.T))
+
+        return quality, sparsity
+
+    def _noiseLevelFast(self):
+        self.beta = (self.N - self.alpha.shape[0] + self.alpha.dot(np.diag(self.covPosterior))) / \
+                    (np.linalg.norm(self.T - self.phi.dot(self.muPosterior))**2 + np.finfo(np.float32).eps)
+
     def fit(self):
         """
         Fit the training data
         """
-        alphaOld = 0 * np.ones(self.N + 1)
+        if not self.useFast:
+            for i in range(self.maxIter):
+                alphaOld = np.array(self.alpha)
 
-        for i in range(self.maxIter):
-            alphaOld = np.array(self.alpha)
+                self._reestimateAlphaBeta()
+                alphaOld = self._prune(alphaOld)
+                self._posterior()
+                if np.linalg.norm(self.alpha - alphaOld) <= self.convergenceThresh:
+                    break
 
-            self._reestimateAlphaBeta()
-            alphaOld = self._prune(alphaOld)
+        else:
+            # alphaOld = np.ones(self.N+1)
+            counter = 0
+
+            while counter < self.maxIter:
+            # while (self.alphaCompare[self.alphaCompare != np.inf].shape[0] != alphaOld[alphaOld != np.inf].shape[0] or
+            #                 np.linalg.norm(self.alphaCompare[self.alphaCompare != np.inf]
+            #                 - alphaOld[alphaOld != np.inf]) > self.convergenceThresh):
+            #     alphaOld = np.copy(self.alphaCompare)
+
+
+                # TODO needs to bring covPosterior into shape first. Does this destroy the calculation?
+                # Amazing results when re estimation of beta is commented out. epsilon?
+                self._posterior()
+                quality, sparsity = self._computeSQ(self.basisVectors.transpose()[counter % (self.N + 1)])
+                self._noiseLevelFast()
+                self._reestimateAlphaBetaFastAndPrune(counter % (self.N + 1), quality, sparsity)
+
+                counter += 1
+
+            # update covariance and mu after the last prune
             self._posterior()
-            if np.linalg.norm(self.alpha - alphaOld) <= self.convergenceThresh:
-                break
 
     def predict(self, unseen_x):
         """
@@ -224,7 +336,6 @@ class RVR(RVM):
 
         Returns:
         T (numpy.ndarray): predicted target values
-
         """
 
         kernel, args = self._get_kernel_function()
@@ -278,6 +389,28 @@ class RVC(RVM):
     Relevance Vector Machine classification
     """
 
+    def _computeSQ(self, basisVector):
+        recent_likelihood, sigmoid = self._likelihood()
+        a = np.diag(self.alpha)
+
+        betaMatrix = np.diag(recent_likelihood)
+        target = self.phi.dot(self.muPosterior) + np.linalg.inv(betaMatrix).dot(self.T - sigmoid)
+        woodburyMatrix = np.dot(betaMatrix,
+                                np.dot(self.phi,
+                                       np.dot(self.covPosterior,
+                                              np.dot(self.phi.transpose(),
+                                                     betaMatrix
+                                                     )
+                                              )
+                                       )
+                                )
+        sparsity = basisVector.transpose().dot(np.dot(betaMatrix, basisVector)) - \
+                   basisVector.transpose().dot(np.dot(woodburyMatrix, basisVector))
+        quality = basisVector.transpose().dot(np.dot(betaMatrix, target)) - \
+                  basisVector.transpose().dot(np.dot(woodburyMatrix, target))
+
+        return quality, sparsity
+
     def irls(self):
         a = np.diag(self.alpha)
         weights_old = np.full(self.muPosterior.shape, np.inf)
@@ -285,7 +418,7 @@ class RVC(RVM):
         second_derivative = None
         iters = 0
         while iters < self.maxIter and np.linalg.norm(
-                self.muPosterior - weights_old) >= self.convergenceThresh:
+                        self.muPosterior - weights_old) >= self.convergenceThresh:
             recent_likelihood, sigmoid = self._likelihood()
             recent_likelihood_matrix = np.diag(recent_likelihood)
             second_derivative = -(np.dot(
@@ -331,17 +464,31 @@ class RVC(RVM):
         pass
 
     def fit(self):
-        alphaOld = 0 * np.ones(self.N + 1)
+        if not self.useFast:
+            alphaOld = 0 * np.ones(self.N + 1)
 
-        iters = 0
-        while np.linalg.norm(self.alpha - alphaOld) >= self.convergenceThresh \
-                and iters < 10:
-            alphaOld = np.array(self.alpha)
+            iters = 0
+            while np.linalg.norm(self.alpha - alphaOld) >= self.convergenceThresh \
+                    and iters < 10:
+                alphaOld = np.array(self.alpha)
 
-            self.irls()
-            self._reestimateAlphaBeta()
-            alphaOld = self._prune(alphaOld)
-            iters += 1
+                self.irls()
+                self._reestimateAlphaBeta()
+                alphaOld = self._prune(alphaOld)
+                iters += 1
+
+        else:
+            alphaOld = np.ones(self.N + 1)
+
+            counter = 0
+            while (self.alphaCompare[self.alphaCompare != np.inf].shape[0] != alphaOld[alphaOld != np.inf].shape[0] or
+                           np.linalg.norm(self.alphaCompare[self.alphaCompare != np.inf]
+                                              - alphaOld[alphaOld != np.inf]) > self.convergenceThresh):
+                alphaOld = np.copy(self.alphaCompare)
+                quality, sparsity = self._computeSQ(self.basisVectors.transpose()[counter % (self.N + 1)])
+                self._reestimateAlphaBetaFastAndPrune(counter % (self.N + 1), quality, sparsity)
+                self.irls()
+                counter += 1
 
     def predict(self, unseen_x):
         """

@@ -35,7 +35,11 @@ def sinc(n, sigma):
     """
     X = np.linspace(-10, 10, n)
     T = np.nan_to_num(np.sin(X) / X) + np.random.normal(0, sigma, n)
+    return X, T
 
+def sin(n, sigma):
+    X = np.linspace(-10, 10, n)
+    T = np.sin(X) + np.random.normal(0, sigma, n)
     return X, T
 
 

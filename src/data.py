@@ -142,7 +142,7 @@ def slump(n=None, path=None):
             T.append(np.asarray(row[7:], dtype=np.float64))
             line_count += 1
 
-        return X, T
+        return np.asarray(X), np.asarray(T)
 
 
 def banana(n=None, fileNumber=1, path=None):
@@ -175,7 +175,7 @@ def banana(n=None, fileNumber=1, path=None):
                 T[-1][0] = 0
             line_count += 1
 
-    return X, np.asarray(T).reshape(-1)
+    return np.asarray(X), np.asarray(T).reshape(-1)
 
 
 def titanic(n=None, fileNumber=1, path=None):
@@ -208,7 +208,7 @@ def titanic(n=None, fileNumber=1, path=None):
                 T[-1][0] = 0
             line_count += 1
 
-    return X, np.asarray(T).reshape(-1)
+    return np.asarray(X), np.asarray(T).reshape(-1)
 
 
 def waveform(n=None, fileNumber=1, path=None):
@@ -241,7 +241,7 @@ def waveform(n=None, fileNumber=1, path=None):
                 T[-1][0] = 0
             line_count += 1
 
-    return X, np.asarray(T).reshape(-1)
+    return np.asarray(X), np.asarray(T).reshape(-1)
 
 
 def german(n=None, fileNumber=1, path=None):
@@ -274,7 +274,7 @@ def german(n=None, fileNumber=1, path=None):
                 T[-1][0] = 0
             line_count += 1
 
-    return X, np.asarray(T).reshape(-1)
+    return np.asarray(X), np.asarray(T).reshape(-1)
 
 
 def image(n=None, fileNumber=1, path=None):
@@ -307,4 +307,4 @@ def image(n=None, fileNumber=1, path=None):
                 T[-1][0] = 0
             line_count += 1
 
-    return X, np.asarray(T).reshape(-1)
+    return np.asarray(X), np.asarray(T).reshape(-1)

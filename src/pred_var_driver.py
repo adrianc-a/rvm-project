@@ -8,34 +8,32 @@ __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
 import data as datagen
 from rvm import RVR, RVC, RVMRS
 import plot as plt
-
+import numpy as np
 
 
 def main():
-    N = 30
-    noiseStdDev = 0.1
+    N = 40
+    noiseStdDev = 0.15
 
-    X_train,  T_train, = datagen.linear(N, noiseStdDev)
+    X_train, T_train, = datagen.cos(N, noiseStdDev)
 
-    fx = lambda x: 1.2 * x**2 + x + 2
+    # fx = lambda x: 1.2 * x**2 + x + 2
+    fx = np.cos
 
-    rvm_model = RVR(X_train, T_train, 'RBFKernel', convergenceThresh=10e-3)
-    rvm_model.fit()
-
-    plt.plot_regressor(
-        rvm_model, 0, 40, train_data=(X_train, T_train), true_func=fx
+    rvm_star_model = RVMRS(
+        X_train, T_train, 'RBFKernel', alphaThresh=1e19,
+        convergenceThresh=10e-8,
     )
-
-
-
-    rvm_star_model = RVMRS(X_train, T_train, 'RBFKernel', convergenceThresh=10e-3)
     rvm_star_model.fit()
 
     plt.plot_regressor(
-        rvm_star_model, 0, 40, train_data=(X_train, T_train), true_func=fx
+        rvm_star_model, 0, 20, train_data=(X_train, T_train), true_func=fx,
+        save_name='rvm_star_cos.png'
+        #title='RVM and RVM* Variance'
     )
 
-    print('rel. vecs rvm:', rvm_model.keptBasisFuncs.shape[0])
+    #plt.show()#
+
     print('rel. vecs rvm*:', rvm_star_model.keptBasisFuncs.shape)
 
     # Plot predictions
@@ -49,8 +47,5 @@ def main():
     # # plt.scatter(X_test, T_test, label='Testing noisy samples')
 
 
-
-
 if __name__ == '__main__':
     main()
-

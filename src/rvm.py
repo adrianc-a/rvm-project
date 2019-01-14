@@ -246,6 +246,9 @@ class RVR(RVM):
 
 class RVMRS(RVR):
 
+    def predict_rvm(self, unseen_x):
+        return super().predict(unseen_x)
+
     def predict(self, unseen_x):
         p_mu, p_sig2 = super().predict(unseen_x)
 

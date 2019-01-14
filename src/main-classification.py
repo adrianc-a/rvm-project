@@ -20,7 +20,7 @@ def main():
     Xtrain, Ttrain = createSimpleClassData(N, w)
     Xtest, Ttest = createSimpleClassData(int(N / 3), w)
 
-    clf = RVC(Xtrain, Ttrain, 'RBFKernel', alphaThresh=10e8, convergenceThresh=10e-2)
+    clf = RVC(Xtrain, Ttrain, 'linearKernel', alphaThresh=10e3, convergenceThresh=10e-1)
     clf.fit()
 
     print("The relevance vectors:")

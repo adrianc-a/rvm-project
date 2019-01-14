@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 from sklearn import svm
 from sklearn.model_selection import cross_validate as cval
 from numpy import linalg as la
+from csv import DictWriter
 
 import numpy as np
 
@@ -24,7 +25,11 @@ REGRESSION_DATASETS = {
 CLASSIFICATION_DATASETS = {
     'linear': lambda: data.createSimpleClassData(100, np.array([1, 1])),
     'breast-cancer': lambda: data.breast_cancer(569),
-    'banana': data.banana
+    'banana': data.banana,
+    'titanic': data.titanic,
+    'waveform': data.waveform,
+    'german': data.german,
+    'image': data.image
 }
 
 
@@ -47,6 +52,8 @@ def parse_args():
     parser.add_argument('-v', '--verbosity', type=int, default=0)
     parser.add_argument('-p', '--pretty-print', action='store_true')
     parser.add_argument('-l', '--latex-print', action='store_true')
+    parser.add_argument('-e', '--csv-export', type=str, default='')
+    parser.add_argument('-n', '--no-print', action='store_true')
 
     return parser.parse_args(argv[1:])
 
@@ -110,7 +117,6 @@ def run_regression_dataset(ds, args):
     rvm_wrapper = RVRFitWrapper(rvm_model)
     rvm_star_wrapper = RVRFitWrapper(rvm_star_model)
 
-
     # results
     svm_results = cval(
         svm_model, x, y, cv=args.folds, return_train_score=False,
@@ -139,7 +145,8 @@ def run_regression_dataset(ds, args):
         mdl.model.keptBasisFuncs.shape[0] for mdl in rvm_results['estimator']
     ]
     rvm_star_results['vec'] = [
-        mdl.model.keptBasisFuncs.shape[0] for mdl in rvm_star_results['estimator']
+        mdl.model.keptBasisFuncs.shape[0] for mdl in
+        rvm_star_results['estimator']
     ]
 
     return rvm_results, rvm_star_results, svm_results
@@ -186,17 +193,50 @@ def pprint(name, res):
     print('\t Avg no. vec:', np.mean(res['vec']))
     print('\tAvg fit time:', np.mean(res['fit_time']))
 
+
 def lprint(name, res):
     # make a latex table...
     pass
+
+
+def write_csv(name, res, is_regression=True):
+    models = ['rvm', 'rvm*', 'svm'] if is_regression else ['rvm', 'svm']
+
+    ext = 'regression' if is_regression else 'classification'
+    with open(name + '_' + ext + '.csv', 'w', newline='') as csvfile:
+        fieldnames = ['Dataset', 'Model', 'Mean Score', 'Mean No. Vectors', 'Mean Fit Time']
+        writer = DictWriter(csvfile, fieldnames=fieldnames)
+
+        writer.writeheader()
+        for line in res:
+            for i in range(len(models)):
+                writer.writerow(
+                    {
+                        fieldnames[0]: line[0],
+                        fieldnames[1]: models[i + 1],
+                        fieldnames[2]: np.mean(line[i]['test_score']),
+                        fieldnames[3]: np.mean(line[i]['vec']),
+                        fieldnames[4]: np.mean(line[i]['fit_time']),
+                    }
+                )
+
+
+def null_func(*args):
+    pass
+
 
 def main(args):
     if args.pretty_print:
         pfunc = pprint
     elif args.latex_print:
         pfunc = lprint
+    elif args.no_print:
+        pfunc = null_func
     else:
         pfunc = print
+
+    regression_results = []
+    classification_results = []
 
     for ds in args.dataset:
         print('Dataset', ds)
@@ -209,12 +249,18 @@ def main(args):
             pfunc(' rvm', rvm_res)
             pfunc('rvm*', rvm_s_res)
             pfunc(' svm', svm_res)
+            if args.csv_export != '':
+                regression_results.append((ds, rvm_res, rvm_s_res, svm_res))
 
         elif ds in CLASSIFICATION_DATASETS:
             rvm_res, svm_res = run_classification_dataset(ds, args)
             pfunc('rvm', rvm_res)
             pfunc('svm', svm_res)
-
+            if args.csv_export != '':
+                classification_results.append((ds, rvm_res, svm_res))
+    if args.csv_export != '':
+        write_csv(args.csv_export, regression_results, is_regression=True)
+        write_csv(args.csv_export, classification_results, is_regression=False)
 
 if __name__ == '__main__':
     main(parse_args())

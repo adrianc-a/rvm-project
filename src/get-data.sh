@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# File to curl data sets from the web
+
+#__author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
+#              and Leo Zeitler"
+
 DIRECTORY=data
 
 if [ ! -d "$DIRECTORY" ]; then

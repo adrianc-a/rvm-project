@@ -292,7 +292,7 @@ class RVR(RVM):
         self.beta = (self.N - self.alpha.shape[0] + self.alpha.dot(np.diag(self.covPosterior))) / \
                     (np.linalg.norm(self.T - self.phi.dot(self.muPosterior))**2 + np.finfo(np.float32).eps)
 
-    def fit(self):
+    def fit(self, convergePercentage=0.1):
         """
         Fit the training data
         """
@@ -307,24 +307,25 @@ class RVR(RVM):
                     break
 
         else:
-            # alphaOld = np.ones(self.N+1)
             counter = 0
-
-            while counter < self.maxIter:
+            iterCounter = 0
+            while iterCounter < int(self.N * convergePercentage):
             # while (self.alphaCompare[self.alphaCompare != np.inf].shape[0] != alphaOld[alphaOld != np.inf].shape[0] or
             #                 np.linalg.norm(self.alphaCompare[self.alphaCompare != np.inf]
             #                 - alphaOld[alphaOld != np.inf]) > self.convergenceThresh):
-            #     alphaOld = np.copy(self.alphaCompare)
+                alphaOld = np.copy(self.alphaCompare)
 
-
-                # TODO needs to bring covPosterior into shape first. Does this destroy the calculation?
-                # Amazing results when re estimation of beta is commented out. epsilon?
                 self._posterior()
                 quality, sparsity = self._computeSQ(self.basisVectors.transpose()[counter % (self.N + 1)])
                 self._noiseLevelFast()
                 self._reestimateAlphaBetaFastAndPrune(counter % (self.N + 1), quality, sparsity)
 
                 counter += 1
+                iterCounter += 1
+                if (self.alphaCompare[self.alphaCompare != np.inf].shape[0] != alphaOld[alphaOld != np.inf].shape[0] or
+                            np.linalg.norm(self.alphaCompare[self.alphaCompare != np.inf]
+                                               - alphaOld[alphaOld != np.inf]) > self.convergenceThresh):
+                    iterCounter = 0
 
             # update covariance and mu after the last prune
             self._posterior()

@@ -32,7 +32,7 @@ def main():
     X_train, X_test, T_train, T_test = initData(N, cos, noiseSpread)
 
     # very sensible to initial value of beta (as described in the paper)
-    clf = RVR(X_train, T_train, 'RBFKernel', beta=0.001**-2, useFast=True, convergenceThresh=10**-10, maxIter=500)
+    clf = RVR(X_train, T_train, 'RBFKernel', beta=0.001**-2, useFast=True, convergenceThresh=10**-2, maxIter=500)
     clf.fit()
 
     print("The relevance vectors:")

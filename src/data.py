@@ -1,25 +1,63 @@
+#!/usr/bin/env python2
+
+"""data.py: Several functions for creating data sets."""
+
+__author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
+              and Leo Zeitler"
+
 import numpy as np
 import os
 import csv
-from sklearn.datasets import make_friedman2, make_friedman3, load_boston, load_breast_cancer
+from sklearn.datasets import make_friedman2, make_friedman3, load_boston, \
+    load_breast_cancer
 
 
 def createSimpleClassData(n, w, scale=10):
+    """Create a toy data set for classification
+
+    Args:
+    n (int): number of data points
+    w (numpy.ndarray): weight vector
+    scale (float): scale factor
+
+    Returns:
+    X (numpy.ndarray): input data points
+    T (numpy.ndarray): targets
+
+    """
     X = np.random.rand(n, 2) * scale - scale / 2.
     T = X.dot(w) > 0
     return X, T.astype(int)
 
 
 def linearClassification(train_n, test_n, w, scale=10):
+    """Create a data set for linear classification
+
+    Args:
+    train_n (int): number of train data points
+    test_n (int): number of test data points
+    w (numpy.ndarray): weight vector
+    scale (float): scale vector
+
+    Returns:
+    Linearly seperable classification data set
+    """
     return (createSimpleClassData(train_n, w, scale),
             createSimpleClassData(test_n, w, scale))
 
 
 def sinc_np(n, sigma):
-    """Generate noisy or noise-free data from the sinc function f(x) = sin(x pi)/x pi
-    Keyword arguments:
-    n -- the number of of data points to be generated
-    sigma -- noise variance
+    """Generate noisy or noise-free data in [-10, 10] from the sinc function
+    f(x) = sin(x pi)/x pi using numpy.
+
+    Args:
+    n (int): the number of of data points to be generated
+    sigma (float): noise variance
+
+    Returns:
+    X (numpy.ndarray): input data points
+    T (numpy.ndarray): targets
+
     """
     X = np.linspace(-10, 10, n)
     T = np.sinc(X) + np.random.normal(0, sigma, n)
@@ -28,26 +66,37 @@ def sinc_np(n, sigma):
 
 
 def sinc(n, sigma):
-    """Generate noisy or noise-free data from the sinc function f(x) = sin(x)/x
-    Keyword arguments:
-    n -- the number of of data points to be generated
-    sigma -- noise variance
+    """Generate noisy or noise-free data in [-10, 10] from the sinc function
+    f(x) = sin(x)/x.
+
+    Args:
+    n (int): the number of of data points to be generated
+    sigma (float): noise variance
+
+    Returns:
+    X (numpy.ndarray): input data points
+    T (numpy.ndarray): targets
+
     """
     X = np.linspace(-10, 10, n)
     T = np.nan_to_num(np.sin(X) / X) + np.random.normal(0, sigma, n)
-    return X, T
 
-def sin(n, sigma):
-    X = np.linspace(-10, 10, n)
-    T = np.sin(X) + np.random.normal(0, sigma, n)
     return X, T
 
 
 def sinc_uniform(n, lower=-1, upper=1):
-    """Generate noisy or noise-free data from the sinc function f(x) = sin(x)/x
-    Keyword arguments:
-    n -- the number of of data points to be generated
-    sigma -- noise variance
+    """Generate noisy data from the sinc function f(x) = sin(x)/x using uniform
+    noise
+
+    Args:
+    n (int): the number of of data points to be generated
+    lower (float): lower bound for uniform noise
+    upper (float): upper bound for uniform noise
+
+    Returns:
+    X (numpy.ndarray): input data points
+    T (numpy.ndarray): targets
+
     """
     X = np.linspace(-10, 10, n)
     T = np.nan_to_num(np.sin(X) / X) + np.random.uniform(low=lower, high=upper, size=n)
@@ -55,36 +104,114 @@ def sinc_uniform(n, lower=-1, upper=1):
     return X, T
 
 
-def cos(n, sigma):
-    X = np.random.uniform(0, 10, size=(n, 1))
-    # X = np.linspace(0, 10, n).reshape((n, 1))
+def sin(n, sigma):
+    """Generate noisy or noise-free data in [-10, 10] from the sin function
 
+    Args:
+    n (int): the number of of data points to be generated
+    sigma (float): noise variance
+
+    Returns:
+    X (numpy.ndarray): input data points
+    T (numpy.ndarray): targets
+
+    """
+    X = np.linspace(-10, 10, n)
+    T = np.sin(X) + np.random.normal(0, sigma, n)
+
+    return X, T
+
+
+def cos(n, sigma):
+    """Generate noisy or noise-free data in [-10, 10] from the cos function
+
+    Args:
+    n (int): the number of of data points to be generated
+    sigma (float): noise variance
+
+    Returns:
+    X (numpy.ndarray): input data points
+    T (numpy.ndarray): targets
+
+    """
+    X = np.random.uniform(0, 10, size=(n, 1))
     T = np.cos(X) + np.random.normal(0, sigma, size=(n, 1))
 
     return X, T.reshape((n,))
 
 
 def cos_test_train(train_n, test_n, sigma):
+    """Create a data set based on the cos function
+
+    Args:
+    train_n (int): number of train data points
+    test_n (int): number of test data points
+    sigma (float): noise variance
+
+    Returns:
+    Cos data set
+
+    """
     return cos(train_n, sigma), cos(test_n, 0.0)
 
 
 def linear(n, sigma):
-    x = np.random.uniform(0, 10, size=(n, 1))
-    t = 1.2 * x ** 2 + x + 2 + np.random.normal(0, sigma, size=(n, 1))
+    """Generate noisy or noise-free linearly seperable data set
 
-    return x, t.reshape((n,))
+    Args:
+    n (int): the number of of data points to be generated
+    sigma (float): noise variance
+
+    Returns:
+    Linearly seperable data set
+
+    """
+    X = np.random.uniform(0, 10, size=(n, 1))
+    T = 1.2 * X ** 2 + X + 2 + np.random.normal(0, sigma, size=(n, 1))
+
+    return X, T.reshape((n,))
 
 
 def friedman_2(n, noise):
+    """Generate the friedman_2 data set
+
+    Args:
+    n (int): number of data samples
+    noise (float): added noise
+
+    Returns:
+    Friedman 2 data set
+
+    """
     return make_friedman2(n_samples=n, noise=noise)
 
 
 def friedman_3(n, noise):
+    """Generate the friedman_3 data set
+
+    Args:
+    n (int): number of data samples
+    noise (float): added noise
+
+    Returns:
+    Friedman 3 data set
+
+    """
     return make_friedman3(n_samples=n, noise=noise)
 
 
 def boston_housing(n=None):
+    """Generate the Boston housing data set
+
+    Args:
+    n (int): number of data samples
+
+    Returns:
+    Boston housing data set
+
+    """
     (X, T) = load_boston(return_X_y=True)
+
     if not n:
         return X, T
     else:
@@ -92,6 +219,15 @@ def boston_housing(n=None):
 
 
 def breast_cancer(n=None):
+    """Generate the sklearn breast cancer data set
+
+    Args:
+    n (int): number of data samples
+
+    Returns:
+    Sklearn breast cancer data set
+
+    """
     (X, T) = load_breast_cancer(return_X_y=True)
     if not n:
         return X, T
@@ -100,6 +236,16 @@ def breast_cancer(n=None):
 
 
 def airfoil(n=None, path=None):
+    """Generate the airfoil data set
+
+    Args:
+    n (int): number of data samples
+    path (str): path to .dat file
+
+    Returns:
+    Sklearn airfoil data set
+
+    """
     if not path:
         path = os.getcwd()
     text_file = open(path + "/data/airFoil.dat", "r")
@@ -118,10 +264,21 @@ def airfoil(n=None, path=None):
         X[i] = float_list[:-1]
         T[i] = float_list[-1]
     text_file.close()
+
     return X, T
 
 
 def slump(n=None, path=None):
+    """Generate the slump data set
+
+    Args:
+    n (int): number of data samples
+    path (str): path to .dat file
+
+    Returns:
+    Sklearn slump data set
+
+    """
     if not path:
         path = os.getcwd()
 
@@ -146,6 +303,17 @@ def slump(n=None, path=None):
 
 
 def banana(n=None, fileNumber=1, path=None):
+    """Generate the banana data set
+
+    Args:
+    n (int): number of data samples
+    fileNumber (int): the file number
+    path (str): path to .dat file
+
+    Returns:
+    Sklearn banana data set
+
+    """
     if not path:
         path = os.getcwd()
 
@@ -179,6 +347,17 @@ def banana(n=None, fileNumber=1, path=None):
 
 
 def titanic(n=None, fileNumber=1, path=None):
+    """Generate the titanic data set
+
+    Args:
+    n (int): number of data samples
+    fileNumber (int): the file number
+    path (str): path to .dat file
+
+    Returns:
+    Sklearn titanic data set
+
+    """
     if not path:
         path = os.getcwd()
 
@@ -212,6 +391,17 @@ def titanic(n=None, fileNumber=1, path=None):
 
 
 def waveform(n=None, fileNumber=1, path=None):
+    """Generate the waveform data set
+
+    Args:
+    n (int): number of data samples
+    fileNumber (int): the file number
+    path (str): path to .dat file
+
+    Returns:
+    Sklearn waveform data set
+
+    """
     if not path:
         path = os.getcwd()
 
@@ -245,6 +435,17 @@ def waveform(n=None, fileNumber=1, path=None):
 
 
 def german(n=None, fileNumber=1, path=None):
+    """Generate the german data set
+
+    Args:
+    n (int): number of data samples
+    fileNumber (int): the file number
+    path (str): path to .dat file
+
+    Returns:
+    Sklearn german data set
+
+    """
     if not path:
         path = os.getcwd()
 
@@ -278,6 +479,17 @@ def german(n=None, fileNumber=1, path=None):
 
 
 def image(n=None, fileNumber=1, path=None):
+    """Generate the image data set
+
+    Args:
+    n (int): number of data samples
+    fileNumber (int): the file number
+    path (str): path to .dat file
+
+    Returns:
+    Sklearn image data set
+
+    """
     if not path:
         path = os.getcwd()
 
@@ -308,3 +520,4 @@ def image(n=None, fileNumber=1, path=None):
             line_count += 1
 
     return np.asarray(X), np.asarray(T).reshape(-1)
+

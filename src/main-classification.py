@@ -24,7 +24,7 @@ def main():
               Ttrain,
               'linearKernel',
               alphaThresh=10e3,
-              convergenceThresh=10e-1)
+              convergenceThresh=10e-4)
     clf.fit()
 
     print("The relevance vectors:")

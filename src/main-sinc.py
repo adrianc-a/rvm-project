@@ -17,7 +17,7 @@ np.random.seed(0)
 
 def main():
     N = 100
-    noiseSpread = 0
+    noiseSpread = 0.001
 
     X_train, X_test, T_train, T_test = initData(N, sinc, noiseSpread)
 

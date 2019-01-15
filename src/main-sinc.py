@@ -1,13 +1,13 @@
+#!/usr/bin/env python2
 
-"""main.py: Relevance Vector Machine (RVM) for regression and classification."""
+"""main-sinc.py: Test RVR for noise-less sinc function."""
 
 __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
               and Leo Zeitler"
 
-from data import sinc, createSimpleClassData
+from data import sinc, initData
 from rvm import RVR, RVC
 
-from sklearn.model_selection import train_test_split
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -15,19 +15,9 @@ import matplotlib.pyplot as plt
 np.random.seed(0)
 
 
-def initData(N, dataset, *args):
-    """Initialize the data set traning and testing examples"""
-    X, T = dataset(N, *args)
-
-    X_train, X_test, T_train, T_test = train_test_split(
-            X, T, test_size=0.2, random_state=42)
-
-    return X_train, X_test, T_train, T_test
-
-
 def main():
-    N = 100 # number of data points
-    noiseSpread = 0.2
+    N = 100
+    noiseSpread = 0
 
     X_train, X_test, T_train, T_test = initData(N, sinc, noiseSpread)
 
@@ -38,7 +28,6 @@ def main():
     print(clf.relevanceVectors)
     print("Beta:", np.sqrt(clf.beta**-1))
 
-    # This is using training data -- should be changed of course
     T_pred, _ = clf.predict(X_test)
 
     # Plot training data

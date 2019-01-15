@@ -5,8 +5,6 @@
 __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
               and Leo Zeitler"
 
-# from kernels import linearKernel, linearSplineKernel, polynomialKernel, \
-#     RBFKernel, cosineKernel, logKernel
 from kernels import get_kernel
 
 from scipy.optimize import minimize
@@ -17,8 +15,11 @@ import numpy as np
 
 
 class RVM:
-    """Relevance Vector Machine class implementation based on Mike Tipping's
-    The Relevance Vector Machine (2000)
+    """Relevance Vector Machine class implementation based on 'The Relevance
+    Vector Machine' (Tipping, 2000), 'Fast Marginal Likelihood Maximisation
+    for Sparse Bayesian Models' (Tipping & Faul, 2003), and 'Healing the
+    relevance vector machine through augmentation' (Rasmussenl &
+    Quinonero-Candela, 2005).
 
     """
 
@@ -38,10 +39,11 @@ class RVM:
             verbosity=0,
             useFast = False
         ):
-        """
-        RVM parameters initialization
+        """RVM parameters initialization
 
         Args:
+        X (numpy.ndarray) = training data
+        T (numpy.ndarray) = targets
         kernelName (string): the kernel function
         p (int): polynomial kernel function parameter
         sigma (int): RBF kernel function parameter
@@ -49,21 +51,21 @@ class RVM:
         beta (float): inital beta value
         convergenceThresh (float): threshold for convergence in fit() function
         alphaThresh (float): threshold for pruning alpha values
+        learningRate (float): The learning rate for the Newton/IRLS update step
         maxIter (int): maximum number of iterations for the posterior mode finder
                        in RVM classification
-        learningRate (float): The learning rate for the Newton/IRLS update step
+        verbosity (int): whether to run verbosely
+        useFast (bool): whether to use the fast implementation
 
         """
 
         self.kernelName = kernelName
         self.p = p
         self.sigma = sigma
-
         self.X = X
         self.T = T
         self.relevanceTargets = T
         self.N = np.shape(X)[0]
-
         self.useFast = useFast
         self.beta = beta
 
@@ -76,32 +78,39 @@ class RVM:
             self.basisVectors = self._initPhi(X)
             if not self.beta:
                 self.beta = 1. / np.var(self.T)
-            self.alpha = self._computeInitAlpha(0, self.basisVectors.transpose()[0])
+            self.alpha = self._computeInitAlpha(0,
+                                                self.basisVectors.transpose()[0])
             self.relevanceVectors = np.asarray([])
 
         self.convergenceThresh = convergenceThresh
         self.alphaThresh = alphaThresh
         self.learningRate = learningRate
         self.maxIter = maxIter
-
         self._setCovAndMu()
         self.keptBasisFuncs = np.arange(self.N + 1)
-
         self.verbosity = verbosity
 
 
     def _get_kernel_function(self):
-        """
-        Getter function for the kernel method set in the constructor together with the params
-        :return: kernel function (function), additional parameters (args)
+        """ Getter function for the kernel method set in the constructor
+        together with the params
+
+        Returns:
+        kernel function (function), additional parameters (args)
+
         """
         return get_kernel(self.kernelName, sigma=self.sigma, p=self.p)
 
+
     def rvm_output(self, unseen_x):
-        """
-        Calculate the output of the rvm for an unseen data point
-        :param unseen_x: unseen data value (float)
-        :return: the sum over the weighted kernel functions (float)
+        """Calculate the output of the rvm for an unseen data point
+
+        Args:
+        unseen_x (float): unseen data value
+
+        Returns:
+        (float): sum over the weighted kernel functions
+
         """
         kernel, args = self._get_kernel_function()
         kernel_output = [kernel(unseen_x, x_i, args) for x_i in
@@ -114,36 +123,48 @@ class RVM:
 
         return kernel_output.dot(self.muPosterior)
 
+
     def _setCovAndMu(self):
-        """
-        Set the covariance and the mean according to the recent alpha and beta values
+        """Set the covariance and the mean according to the recent alpha and
+        beta values
         """
         self.covPosterior = np.linalg.inv(
             np.diag(self.alpha) + self.beta * np.dot(self.phi.T, self.phi)
         )
-        self.muPosterior = self.beta * np.dot(self.covPosterior, self.phi.T).dot(self.T)
+        self.muPosterior = self.beta *\
+                           np.dot(self.covPosterior, self.phi.T).dot(self.T)
+
 
     def _computeInitAlpha(self, index, basisVector):
+        """Initialize alpha for the fast implementation
+
+        Args:
+        index (int): index
+        basisVector (np.ndarray): the bias term
+
+        Returns:
+        (numpy.ndarray): Initialized alpha matrix
+
+        """
         squaredNorm = np.linalg.norm(basisVector) ** 2
-        denominator = (np.linalg.norm(basisVector.transpose().dot(self.T)) ** 2 / squaredNorm) - self.beta**-1
+        denominator = (np.linalg.norm(basisVector.transpose().dot(self.T)) ** 2
+                       / squaredNorm) - self.beta**-1
 
         self.alphaCompare[index] = squaredNorm / denominator
+
         return np.asarray([self.alphaCompare[index]])
 
+
     def _initPhi(self, X):
-        """
-        Initialize the design matrix based on the specified kernel function.
+        """Initialize the design matrix based on the specified kernel function.
 
         Args:
         X (numpy.ndarray): the training data
-        kernelName (str): the kernel function
 
         Returns:
-        PHI (numpy.ndarray): the design matrix
+        phi (numpy.ndarray): the design matrix
 
         """
-        # in the begining these are the same
-        # but when we are calculating the predictive posterior, they will not be
         phi = np.ones((self.N ,self.N+1))
 
         kernel, args = self._get_kernel_function()
@@ -158,9 +179,16 @@ class RVM:
 
         return phi
 
+
     def _prune(self, alphaOld):
-        """
-        Prunes alpha such that only relevant weights are kept
+        """Prunes alpha such that only relevant weights are kept
+
+        Args:
+        alphaOld (numpy.ndarray): the old alpha values
+
+        Returns:
+        (numpy.ndarray): the useful alpha values
+
         """
         useful = self.alpha < self.alphaThresh
         if useful.all():
@@ -186,24 +214,37 @@ class RVM:
 
         return alphaOld[useful]
 
+
     def _reestimateAlphaBeta(self):
-        """
-        Re-estimates alpha and beta values according to the paper
+        """Re-estimates alpha and beta values according to the original (2000)
+        paper
+
         """
         gamma = 1 - self.alpha * np.diag(self.covPosterior)
         self.alpha = gamma / (self.muPosterior ** 2)
         self.beta = (self.N - np.sum(gamma)) / (np.linalg.norm(
             self.T - np.dot(self.phi, self.muPosterior)) ** 2)
 
+
     def _reestimateAlphaBetaFastAndPrune(self, index, quality, sparsity):
-        # mask = np.indices(self.alphaCompare.shape)[0][self.alphaCompare != np.inf]
+        """Re-estimates alpha and beta values according to the fast
+        implementation (2003)
+
+        Args:
+        index (int): index
+        quality (float): the quality factor
+        sparsity (float): the sparsity factor
+
+        """
         mask = self.alphaCompare != np.inf
         if self.alphaCompare[index] == np.inf:
             s = sparsity
             q = quality
         else:
-            s = (self.alphaCompare[index] * sparsity) / (self.alphaCompare[index] - sparsity)
-            q = (self.alphaCompare[index] * quality) / (self.alphaCompare[index] - sparsity)
+            s = (self.alphaCompare[index] * sparsity) / \
+                (self.alphaCompare[index] - sparsity)
+            q = (self.alphaCompare[index] * quality) / \
+                (self.alphaCompare[index] - sparsity)
 
         theta = (q ** 2) - s
 
@@ -218,7 +259,8 @@ class RVM:
             self.alphaCompare[index] = newAlpha
             self.alpha = self.alphaCompare[mask]
             self.phi = (self.basisVectors.transpose()[mask]).transpose()
-            self.keptBasisFuncs = np.indices((self.basisVectors.transpose().shape[0],)).reshape(-1)[mask]
+            self.keptBasisFuncs = np.indices(
+                (self.basisVectors.transpose().shape[0],)).reshape(-1)[mask]
             if self.alphaCompare[0] != np.inf:
                 self.relevanceVectors = self.X[mask[1:]]
                 self.relevanceTargets = self.T[mask[1:]]
@@ -235,7 +277,8 @@ class RVM:
 
             self.alpha = self.alphaCompare[mask]
             self.phi = (self.basisVectors.transpose()[mask]).transpose()
-            self.keptBasisFuncs = np.indices((self.basisVectors.transpose().shape[0],)).reshape(-1)[mask]
+            self.keptBasisFuncs = np.indices(
+                (self.basisVectors.transpose().shape[0],)).reshape(-1)[mask]
             if self.alphaCompare[0] != np.inf:
                 self.relevanceVectors = self.X[mask[1:]]
                 self.relevanceTargets = self.T[mask[1:]]
@@ -245,42 +288,39 @@ class RVM:
 
 
     def fit(self):
-        """
-        Dummy for the learning method
-        """
+        """Dummy for the learning method"""
         pass
 
     def predict(self, unseen_x):
-        """
-        Dummy for the predicting method
-        """
+        """Dummy for the predicting method"""
         pass
 
     def _computeSQ(self, basisVector):
-        """
-        Dummy for computing the S and the Q value for the fast implementation
-        :param basisVector: the basis vector used for the calculation and
-        which corresponds to the currently updated alpha
-        :return: the Q and S value
-        """
+        """Dummy for computing S and Q values for the fast implementation"""
         pass
 
 
 class RVR(RVM):
-    """
-    Relevance Vector Machine regression
-    """
+    """Relevance Vector Machine regression"""
 
     def _posterior(self):
-        """
-        Compute the posterior distribution over the weights
-        """
+        """Compute the posterior distribution over the weights"""
         self._setCovAndMu()
 
+
     def _computeSQ(self, basisVector):
+        """Compute S and Q for the fast implementation
+
+        Args:
+        basisVector (numpy.ndarray): the basis vector used for the calculation
+                                     which corresponds to the updated alpha
+        Returns:
+        The Q and S value
+        """
         a = np.linalg.inv(np.diag(self.alpha))
         cMatrix = np.linalg.inv(
-            self.beta**-1 * np.eye(basisVector.shape[0]) + self.phi.dot(np.dot(a, self.phi.transpose()))
+            self.beta**-1 * np.eye(basisVector.shape[0]) +
+            self.phi.dot(np.dot(a, self.phi.transpose()))
         )
 
         sparsity = basisVector.transpose().dot(np.dot(cMatrix, basisVector))
@@ -288,14 +328,17 @@ class RVR(RVM):
 
         return quality, sparsity
 
+
     def _noiseLevelFast(self):
-        self.beta = (self.N - self.alpha.shape[0] + self.alpha.dot(np.diag(self.covPosterior))) / \
-                    (np.linalg.norm(self.T - self.phi.dot(self.muPosterior))**2 + np.finfo(np.float32).eps)
+        """Re-estimate the noise level (beta)"""
+        self.beta = (self.N - self.alpha.shape[0] +
+                     self.alpha.dot(np.diag(self.covPosterior))) / \
+                    (np.linalg.norm(self.T - self.phi.dot(self.muPosterior))**2
+                     + np.finfo(np.float32).eps)
+
 
     def fit(self):
-        """
-        Fit the training data
-        """
+        """Fit the training data"""
         if not self.useFast:
             for i in range(self.maxIter):
                 alphaOld = np.array(self.alpha)
@@ -307,39 +350,31 @@ class RVR(RVM):
                     break
 
         else:
-            # alphaOld = np.ones(self.N+1)
             counter = 0
 
             while counter < self.maxIter:
-            # while (self.alphaCompare[self.alphaCompare != np.inf].shape[0] != alphaOld[alphaOld != np.inf].shape[0] or
-            #                 np.linalg.norm(self.alphaCompare[self.alphaCompare != np.inf]
-            #                 - alphaOld[alphaOld != np.inf]) > self.convergenceThresh):
-            #     alphaOld = np.copy(self.alphaCompare)
-
-
-                # TODO needs to bring covPosterior into shape first. Does this destroy the calculation?
-                # Amazing results when re estimation of beta is commented out. epsilon?
                 self._posterior()
-                quality, sparsity = self._computeSQ(self.basisVectors.transpose()[counter % (self.N + 1)])
+                quality, sparsity = self._computeSQ(
+                    self.basisVectors.transpose()[counter % (self.N + 1)])
                 self._noiseLevelFast()
-                self._reestimateAlphaBetaFastAndPrune(counter % (self.N + 1), quality, sparsity)
+                self._reestimateAlphaBetaFastAndPrune(counter % (self.N + 1),
+                                                      quality, sparsity)
 
                 counter += 1
 
-            # update covariance and mu after the last prune
             self._posterior()
 
+
     def predict(self, unseen_x):
-        """
-        Predict the value of a new data point
+        """Predict the value of a new data point
 
         Args:
         unseen x (float): unseen data point
 
         Returns:
         T (numpy.ndarray): predicted target values
-        """
 
+        """
         kernel, args = self._get_kernel_function()
 
         if len(self.X.shape) == 1:
@@ -348,33 +383,49 @@ class RVR(RVM):
         phi = np.array([[kernel(self.X[i - 1, :], xs, args) if i != 0 else 1 for i in
                           self.keptBasisFuncs] for xs in unseen_x])
 
-        # lmk if there is a better way to fix this...
-        # if self.X.shape[1] == 1:
-        #     self.X = self.X.reshape(-1)
-
         variances = 1.0/self.beta + np.diag(phi.dot(self.covPosterior.dot(phi.T)))
 
         return np.asarray([self.rvm_output(x) for x in unseen_x]), variances
 
 
 class RVMRS(RVR):
+    """Relevance Vector Machine Star (RVM*) regression implementation"""
 
     def predict_rvm(self, unseen_x):
+        """Predict the value of a new data point
+
+        Args:
+        unseen x (float): unseen data point
+
+        Returns:
+        p_mu (float): predicted mean
+        p_sig2 (numpy.ndarray): predicted variance
+
+        """
         return super().predict(unseen_x)
 
     def predict(self, unseen_x):
+        """Predict the value of a new data point
+
+        Args:
+        unseen x (float): unseen data point
+
+        Returns:
+        p_mu (float): predicted mean
+        p_sig2 (numpy.ndarray): predicted variance
+
+        """
         p_mu, p_sig2 = super().predict(unseen_x)
 
         kernel, args = self._get_kernel_function()
 
         a_s = 1.0 / np.var(self.T)
-        # new sample is a row
         for r in range(unseen_x.shape[0]):
             xs = unseen_x[r, :]
             phi_s = np.array([kernel(xs, xi, args) for xi in self.X]).T
             phi_xs = kernel(xs, xs, args)
-            phi_x = np.array([kernel(self.X[i - 1, :], xs, args) if i != 0 else 1 for i in
-                              self.keptBasisFuncs])
+            phi_x = np.array([kernel(self.X[i - 1, :], xs, args) if i != 0
+                              else 1 for i in self.keptBasisFuncs])
 
             q = phi_s.T.dot(self.T - self.phi.dot(self.muPosterior)) * self.beta
             e = phi_xs - self.beta * phi_x.dot(
@@ -386,20 +437,29 @@ class RVMRS(RVR):
 
             p_mu[r] += (e * q) / (a_s + s)
             p_sig2[r] += (e ** 2) / (a_s + s)
+
         return p_mu, p_sig2
 
 
 class RVC(RVM):
-    """
-    Relevance Vector Machine classification
-    """
+    """Relevance Vector Machine classification"""
 
     def _computeSQ(self, basisVector):
+        """Compute S and Q for the fast implementation
+
+        Args:
+        basisVector (numpy.ndarray): the basis vector used for the calculation
+                                     which corresponds to the updated alpha
+        Returns:
+        The Q and S value
+
+        """
         recent_likelihood, sigmoid = self._likelihood()
         a = np.diag(self.alpha)
 
         betaMatrix = np.diag(recent_likelihood)
-        target = self.phi.dot(self.muPosterior) + np.linalg.inv(betaMatrix).dot(self.T - sigmoid)
+        target = self.phi.dot(self.muPosterior) + \
+                 np.linalg.inv(betaMatrix).dot(self.T - sigmoid)
         woodburyMatrix = np.dot(betaMatrix,
                                 np.dot(self.phi,
                                        np.dot(self.covPosterior,
@@ -415,6 +475,7 @@ class RVC(RVM):
                   basisVector.transpose().dot(np.dot(woodburyMatrix, target))
 
         return quality, sparsity
+
 
     def irls(self):
         a = np.diag(self.alpha)
@@ -444,16 +505,17 @@ class RVC(RVM):
             print('Iterations used: ', iters)
         self.covPosterior = np.linalg.inv(-second_derivative)
 
+
     def _likelihood(self):
-        """
-        Classify a data point
+        """Classify a data point
 
         Args:
         X (numpy.ndarray): datapoints
 
         Returns:
-        sigmoid (numpy.ndarray): the sigmoid of the dot product of the weights with the
-                         design matrix
+        beta (float): the noise parameter
+        sigmoid (numpy.ndarray): the sigmoid of the dot product of the weights
+                                 with the design matrix
 
         """
         sigmoid = np.asarray(
@@ -462,13 +524,17 @@ class RVC(RVM):
 
         return beta, sigmoid
 
+
     def _posterior(self, weights_new):
         pass
+
 
     def _posteriorGradient(self, weights_new):
         pass
 
+
     def fit(self):
+        """Fit the data"""
         if not self.useFast:
             alphaOld = 0 * np.ones(self.N + 1)
 
@@ -486,21 +552,30 @@ class RVC(RVM):
             alphaOld = np.ones(self.N + 1)
 
             counter = 0
-            while (self.alphaCompare[self.alphaCompare != np.inf].shape[0] != alphaOld[alphaOld != np.inf].shape[0] or
-                           np.linalg.norm(self.alphaCompare[self.alphaCompare != np.inf]
-                                              - alphaOld[alphaOld != np.inf]) > self.convergenceThresh):
+            while (self.alphaCompare[self.alphaCompare != np.inf].shape[0] !=
+                   alphaOld[alphaOld != np.inf].shape[0] or np.linalg.norm(
+                        self.alphaCompare[self.alphaCompare != np.inf] -
+                        alphaOld[alphaOld != np.inf]) > self.convergenceThresh):
                 alphaOld = np.copy(self.alphaCompare)
-                quality, sparsity = self._computeSQ(self.basisVectors.transpose()[counter % (self.N + 1)])
-                self._reestimateAlphaBetaFastAndPrune(counter % (self.N + 1), quality, sparsity)
+                quality, sparsity = self._computeSQ(
+                    self.basisVectors.transpose()[counter % (self.N + 1)])
+                self._reestimateAlphaBetaFastAndPrune(counter %
+                                                      (self.N + 1),
+                                                      quality, sparsity)
                 self.irls()
                 counter += 1
 
+
     def predict(self, unseen_x):
-        """
-        Make predictions for unseen data
-        :param unseen_x: unseen data (np.array)
-        :return: prediction values and
+        """Make predictions for unseen data
+
+        Args
+        unseen_x (numpy.array): unseen data
+
+        Returns:
+        Prediction values
         """
         return np.asarray(
             [1.0 / (1.0 + math.exp(-self.rvm_output(x))) for x in unseen_x]
         )
+

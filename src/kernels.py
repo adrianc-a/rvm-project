@@ -67,14 +67,38 @@ def RBFKernel(x, y, *args):
 
 
 def cosineKernel(x, y, *args):
+    """Cosine kernel
+
+    Args:
+    x (float): a datapoint
+    y (float): a datapoint
+    *args (none)
+
+    """
     return (np.pi / 4.0) * np.cos(np.pi * 0.5 * np.linalg.norm(x - y))
 
 
 def logKernel(x, y, *args):
+    """Logarithmic kernel
+
+    Args:
+    x (float): a datapoint
+    y (float): a datapoint
+    *args (none)
+
+    """
     return np.log(1 + np.linalg.norm(x - y) ** 2)
 
 
 def get_kernel(kernelName, sigma=2, p=3):
+    """Gets a specific kernel
+
+    Args:
+    kernelName (str): name of the kernel that we want to obtain
+    sigma (float): sigma parameter for RBFKernel
+    p (int): p parameter for polynomialKernel
+
+    """
     if kernelName == 'linearKernel':
         return linearKernel, None
 
@@ -92,3 +116,4 @@ def get_kernel(kernelName, sigma=2, p=3):
 
     elif kernelName == 'logKernel':
         return logKernel, None
+

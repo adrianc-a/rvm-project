@@ -1,34 +1,18 @@
 #!/usr/bin/env python2
 
-"""main.py: Relevance Vector Machine (RVM) for regression and classification."""
+"""main-airfoil.py: File for testing RVR on the airfoil data set"""
 
 __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
               and Leo Zeitler"
 
-from data import sinc, createSimpleClassData, airfoil
-from rvm import RVR, RVC
+from data import airfoil, initData
+from rvm import RVR
 
-from sklearn.model_selection import train_test_split
 import numpy as np
 import matplotlib.pyplot as plt
 
 # Set a random seed
 np.random.seed(0)
-
-# Proposal:
-# Accuracy measure: mean+std difference from true value
-# Plot: per dimension and one pca one
-#
-#
-#
-#
-
-def initData(N, dataset): #*args
-    """Initialize the data set training and testing examples"""
-    X, T = dataset(N)
-    X_train, X_test, T_train, T_test = train_test_split(
-            X, T, test_size=0.2, random_state=42)
-    return X_train, X_test, T_train, T_test
 
 
 def main():
@@ -42,7 +26,6 @@ def main():
     print("Number of relevance vectors:")
     print(len(clf.relevanceVectors))
 
-    # This is using training data -- should be changed of course
     T_pred, _ = clf.predict(X_test)
     relError = np.mean([abs(true - pred) / true for true, pred in zip(T_test, T_pred)])
     absError = np.mean([abs(true - pred) for true, pred in zip(T_test, T_pred)])

@@ -308,3 +308,70 @@ def image(n=None, fileNumber=1, path=None):
             line_count += 1
 
     return np.asarray(X), np.asarray(T).reshape(-1)
+
+
+def thyroid(n=None, fileNumber=1, path=None):
+    if not path:
+        path = os.getcwd()
+
+    X = []
+    T = []
+    with open(path + "/data/thyroid/thyroid_train_data_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            X.append(np.asarray(row[:], dtype=np.float64))
+            line_count += 1
+
+    with open(path + "/data/thyroid/thyroid_train_labels_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            T.append(np.asarray(row[:], dtype=np.float64))
+            if T[-1][0] < 0:
+                T[-1][0] = 0
+            line_count += 1
+
+    return np.asarray(X), np.asarray(T).reshape(-1)
+
+
+def splice(n=None, fileNumber=1, path=None):
+    if not path:
+        path = os.getcwd()
+
+    X = []
+    T = []
+    with open(path + "/data/splice/splice_train_data_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            X.append(np.asarray(row[:], dtype=np.float64))
+            line_count += 1
+
+    with open(path + "/data/splice/splice_train_labels_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            T.append(np.asarray(row[:], dtype=np.float64))
+            if T[-1][0] < 0:
+                T[-1][0] = 0
+            line_count += 1
+
+    return np.asarray(X), np.asarray(T).reshape(-1)
+

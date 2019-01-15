@@ -41,3 +41,17 @@ tar xvzf data/image.tar.gz -C data/image
 rm data/image.tar.gz
 mv data/image/home/brain/raetsch/expose/image/* data/image
 rm -r data/image/home
+
+curl https://public.bmi.inf.ethz.ch/user/raetsch/benchmarks/splice.data.tar.gz -o data/splice.tar.gz
+mkdir -p data/splice
+tar xvzf data/splice.tar.gz -C data/splice
+rm data/splice.tar.gz
+mv data/splice/home/brain/raetsch/expose/splice/* data/splice
+rm -r data/splice/home
+
+curl https://public.bmi.inf.ethz.ch/user/raetsch/benchmarks/thyroid.data.tar.gz -o data/thyroid.tar.gz
+mkdir -p data/thyroid
+tar xvzf data/thyroid.tar.gz -C data/thyroid
+rm data/thyroid.tar.gz
+mv data/thyroid/home/brain/raetsch/expose/thyroid/* data/thyroid
+rm -r data/thyroid/home

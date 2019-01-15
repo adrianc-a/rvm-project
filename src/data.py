@@ -8,8 +8,33 @@ __author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
 import numpy as np
 import os
 import csv
+
+from sklearn.model_selection import train_test_split
 from sklearn.datasets import make_friedman2, make_friedman3, load_boston, \
     load_breast_cancer
+
+# Set a random seed
+np.random.seed(0)
+
+
+def initData(N, dataset, *args):
+    """Initialize a data set with training and testing examples
+
+    Args:
+    N (int): numer of data points
+    dataset (str): name of the data set
+    *args (none)
+
+    Returns:
+    Data set split in training and testing examples
+
+    """
+    X, T = dataset(N, *args)
+
+    X_train, X_test, T_train, T_test = train_test_split(
+            X, T, test_size=0.2, random_state=42)
+
+    return X_train, X_test, T_train, T_test
 
 
 def createSimpleClassData(n, w, scale=10):

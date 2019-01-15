@@ -27,7 +27,7 @@ def main():
               'RBFKernel',
               beta=0.001**-2,
               useFast=True,
-              convergenceThresh=10**-10,
+              convergenceThresh=10**-2,
               maxIter=500)
     clf.fit()
 

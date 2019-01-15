@@ -546,3 +546,91 @@ def image(n=None, fileNumber=1, path=None):
 
     return np.asarray(X), np.asarray(T).reshape(-1)
 
+
+def thyroid(n=None, fileNumber=1, path=None):
+    """Generate the thyroid data set
+
+    Args:
+    n (int): number of data samples
+    fileNumber (int): the file number
+    path (str): path to .dat file
+
+    Returns:
+    Sklearn thyroid data set
+
+    """
+    if not path:
+        path = os.getcwd()
+
+    X = []
+    T = []
+    with open(path + "/data/thyroid/thyroid_train_data_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            X.append(np.asarray(row[:], dtype=np.float64))
+            line_count += 1
+
+    with open(path + "/data/thyroid/thyroid_train_labels_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            T.append(np.asarray(row[:], dtype=np.float64))
+            if T[-1][0] < 0:
+                T[-1][0] = 0
+            line_count += 1
+
+    return np.asarray(X), np.asarray(T).reshape(-1)
+
+
+def splice(n=None, fileNumber=1, path=None):
+    """Generate the splice data set
+
+    Args:
+    n (int): number of data samples
+    fileNumber (int): the file number
+    path (str): path to .dat file
+
+    Returns:
+    Sklearn splice data set
+
+    """
+    if not path:
+        path = os.getcwd()
+
+    X = []
+    T = []
+    with open(path + "/data/splice/splice_train_data_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            X.append(np.asarray(row[:], dtype=np.float64))
+            line_count += 1
+
+    with open(path + "/data/splice/splice_train_labels_" + str(fileNumber) + ".asc") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=' ', skipinitialspace=True)
+
+        line_count = 0
+        for row in csv_reader:
+            if line_count == n:
+                break
+
+            T.append(np.asarray(row[:], dtype=np.float64))
+            if T[-1][0] < 0:
+                T[-1][0] = 0
+            line_count += 1
+
+    return np.asarray(X), np.asarray(T).reshape(-1)
+

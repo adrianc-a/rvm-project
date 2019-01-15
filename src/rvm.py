@@ -337,7 +337,7 @@ class RVR(RVM):
                      + np.finfo(np.float32).eps)
 
 
-    def fit(self):
+    def fit(self, convergePercentage=0.1):
         """Fit the training data"""
         if not self.useFast:
             for i in range(self.maxIter):
@@ -351,8 +351,9 @@ class RVR(RVM):
 
         else:
             counter = 0
-
-            while counter < self.maxIter:
+            iterCounter = 0
+            while iterCounter < int(self.N * convergePercentage) and counter < self.maxIter:
+                alphaOld = np.copy(self.alphaCompare)
                 self._posterior()
                 quality, sparsity = self._computeSQ(
                     self.basisVectors.transpose()[counter % (self.N + 1)])
@@ -361,6 +362,11 @@ class RVR(RVM):
                                                       quality, sparsity)
 
                 counter += 1
+                iterCounter += 1
+                if (self.alphaCompare[self.alphaCompare != np.inf].shape[0] != alphaOld[alphaOld != np.inf].shape[0] or
+                            np.linalg.norm(self.alphaCompare[self.alphaCompare != np.inf]
+                                               - alphaOld[alphaOld != np.inf]) > self.convergenceThresh):
+                    iterCounter = 0
 
             self._posterior()
 

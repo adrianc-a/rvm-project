@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+
+"""run_dataset.py: runner file to test RVM, fast RVM, SVM and RVM*"""
+
+__author__ = "Adrian Chiemelewski-Anders, Clara Tump, Bas Straathof \
+              and Leo Zeitler"
+
 from sys import argv
 from argparse import ArgumentParser
 from sklearn import svm
@@ -34,6 +41,7 @@ CLASSIFICATION_DATASETS = {
 
 
 def parse_args():
+    """Parse command line arguments"""
     parser = ArgumentParser(
         description='Run and collect statistics for RVM/RVM*/SVM on specified data'
     )
@@ -60,6 +68,7 @@ def parse_args():
 
 
 class RVRFitWrapper:
+    """Wrapper class for RVR"""
     def __init__(self, model_factory):
         self.model_factory = model_factory
         self.model = None
@@ -79,6 +88,7 @@ class RVRFitWrapper:
 
 
 class RVCFitWrapper(RVRFitWrapper):
+    """Wrapper class for RVC"""
     def predict(self, x):
         return np.where(self.model.predict(x) >= .5, 1, 0)
 
@@ -88,6 +98,15 @@ class RVCFitWrapper(RVRFitWrapper):
 
 
 def create_kernel_callable(kname):
+    """Creates a callable for kernel
+
+    Args:
+    kname (str): name of the kernel
+
+    Returns:
+    _kernel (func): corresponding kernel function callable
+
+    """
     kernel, argv = get_kernel(kname)
 
     def _kernel(x, y):
@@ -97,6 +116,19 @@ def create_kernel_callable(kname):
 
 
 def run_regression_dataset(ds, args):
+    """Run tests of regression data set
+
+    Args:
+    ds (str): name of the data set
+    args (str): command line arguments
+
+    Returns:
+    rvm_results: results of original RVM regressor
+    rvm_star_results: results of RVM* regressor
+    rvm_fast_results: results of fast RVM regressor
+    svm_results: results of SVM regressor
+
+    """
     x, y = REGRESSION_DATASETS[ds]()
 
     print('Read dataset')
@@ -175,6 +207,18 @@ def run_regression_dataset(ds, args):
 
 
 def run_classification_dataset(ds, args):
+    """Run tests on classification data set
+
+    Args:
+    ds (str): name of the data set
+    args (str): command line arguments
+
+    Returns:
+    rvm_results: results of original RVM classifier
+    rvm_fast_results: results of fast RVM classifier
+    svm_results: results of SVM classifier
+
+    """
     x, y = CLASSIFICATION_DATASETS[ds]()
 
     rvm_model = lambda a, b: rvm.RVC(
@@ -227,6 +271,13 @@ def run_classification_dataset(ds, args):
 
 
 def pprint(name, res):
+    """Pretty print the resuylts of a test
+
+    Args:
+    name (str): name of test
+    res (dict): results of test
+
+    """
     print(name)
     print('\t   Avg score:', np.mean(res['test_score']))
     print('\t Avg no. vec:', np.mean(res['vec']))
@@ -234,11 +285,19 @@ def pprint(name, res):
 
 
 def lprint(name, res):
-    # make a latex table...
+    """Make a latex table"""
     pass
 
 
 def write_csv(name, res, is_regression=True):
+    """Write results to a CSV file
+
+    Args:
+    name (str): name of test
+    res (dict): results of test
+    is_regression (bool): specification of whether data was regression problem
+
+    """
     models = ['rvm', 'rvm*', 'rvmf', 'svm'] if is_regression else [' rvm', 'rvmf' ' svm']
 
     ext = 'regression' if is_regression else 'classification'
@@ -261,6 +320,7 @@ def write_csv(name, res, is_regression=True):
 
 
 def null_func(*args):
+    """Null function"""
     pass
 
 

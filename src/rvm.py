@@ -309,7 +309,7 @@ class RVR(RVM):
         else:
             counter = 0
             iterCounter = 0
-            while iterCounter < int(self.N * convergePercentage):
+            while iterCounter < int(self.N * convergePercentage) and counter < self.maxIter:
             # while (self.alphaCompare[self.alphaCompare != np.inf].shape[0] != alphaOld[alphaOld != np.inf].shape[0] or
             #                 np.linalg.norm(self.alphaCompare[self.alphaCompare != np.inf]
             #                 - alphaOld[alphaOld != np.inf]) > self.convergenceThresh):

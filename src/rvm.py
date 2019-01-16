@@ -37,7 +37,8 @@ class RVM:
             learningRate=0.2,
             maxIter=100,
             verbosity=0,
-            useFast = False
+            betaFixed=False,
+            useFast=False
         ):
         """RVM parameters initialization
 
@@ -55,6 +56,7 @@ class RVM:
         maxIter (int): maximum number of iterations for the posterior mode finder
                        in RVM classification
         verbosity (int): whether to run verbosely
+        betaFixed (bool): specify whether we keep beta fixed
         useFast (bool): whether to use the fast implementation
 
         """
@@ -66,6 +68,7 @@ class RVM:
         self.T = T
         self.relevanceTargets = T
         self.N = np.shape(X)[0]
+        self.betaFixed = betaFixed
         self.useFast = useFast
         self.beta = beta
 
@@ -222,8 +225,10 @@ class RVM:
         """
         gamma = 1 - self.alpha * np.diag(self.covPosterior)
         self.alpha = gamma / (self.muPosterior ** 2)
-        self.beta = (self.N - np.sum(gamma)) / (np.linalg.norm(
-            self.T - np.dot(self.phi, self.muPosterior)) ** 2)
+
+        if not self.betaFixed:
+            self.beta = (self.N - np.sum(gamma)) / (np.linalg.norm(
+                self.T - np.dot(self.phi, self.muPosterior)) ** 2)
 
 
     def _reestimateAlphaBetaFastAndPrune(self, index, quality, sparsity):
@@ -386,12 +391,16 @@ class RVR(RVM):
         if len(self.X.shape) == 1:
             self.X = self.X.reshape((self.N, 1))
 
-        phi = np.array([[kernel(self.X[i - 1, :], xs, args) if i != 0 else 1 for i in
-                          self.keptBasisFuncs] for xs in unseen_x])
+        if not self.betaFixed:
+            phi = np.array([[kernel(self.X[i - 1, :], xs, args) if i != 0 else 1 for i in
+                            self.keptBasisFuncs] for xs in unseen_x])
 
-        variances = 1.0/self.beta + np.diag(phi.dot(self.covPosterior.dot(phi.T)))
+            variances = 1.0/self.beta + np.diag(phi.dot(self.covPosterior.dot(phi.T)))
 
-        return np.asarray([self.rvm_output(x) for x in unseen_x]), variances
+            return np.asarray([self.rvm_output(x) for x in unseen_x]), variances
+
+        else:
+            return np.asarray([self.rvm_output(x) for x in unseen_x])
 
 
 class RVMRS(RVR):
